@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intext Reader</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="panel">
+      <header class="header">
+        <h1>Intext Reader</h1>
+        <p>保存文本后，在网页中选中文字并使用快捷键插入。</p>
+      </header>
+
+      <section class="page-control" aria-label="当前页面状态">
+        <p id="pageStatus">当前页面：检测中</p>
+        <button id="togglePageButton" class="secondary" type="button">检测中</button>
+      </section>
+
+      <label class="field">
+        <span>小说文本</span>
+        <textarea id="novelText" rows="9" placeholder="在这里粘贴 txt 文本"></textarea>
+      </label>
+
+      <label class="file-row">
+        <span>导入 txt</span>
+        <input id="txtFile" type="file" accept=".txt,text/plain">
+      </label>
+
+      <div class="grid">
+        <label id="pageSizeField" class="field">
+          <span>每页字数</span>
+          <input id="pageSize" type="number" min="1" step="1" value="49">
+        </label>
+
+        <label class="field">
+          <span>分隔符</span>
+          <input id="separator" type="text" value=" ">
+        </label>
+      </div>
+
+      <label class="field">
+        <span>当前位置</span>
+        <input id="offset" type="number" min="0" step="1" value="0">
+      </label>
+
+      <section class="display-settings" aria-label="显示设置">
+        <div class="field">
+          <span>阅读模式</span>
+          <div class="choice-row">
+            <label><input type="radio" name="readMode" value="plain">普通插入</label>
+            <label><input type="radio" name="readMode" value="embedded" checked>嵌入阅读</label>
+          </div>
+        </div>
+
+        <div id="embedSettings">
+          <div class="field">
+            <span>嵌入方式</span>
+            <div class="choice-row">
+              <label><input type="radio" name="embedWidthMode" value="fixed">固定宽度</label>
+              <label><input type="radio" name="embedWidthMode" value="auto" checked>自动贴合</label>
+            </div>
+          </div>
+
+          <div class="grid">
+            <label id="slotWidthField" class="field">
+              <span id="slotWidthLabel">最大槽宽 px</span>
+              <input id="slotWidth" type="number" min="40" step="10" value="420">
+            </label>
+
+            <label class="field">
+              <span>嵌入行数</span>
+              <input id="embedLineCount" type="number" min="1" max="3" step="1" value="1">
+            </label>
+          </div>
+
+          <label id="verticalOffsetField" class="field">
+            <span>垂直校正 <output id="verticalOffsetValue">-0.05em</output></span>
+            <input id="verticalOffset" type="range" min="-0.8" max="0.4" step="0.01" value="-0.05">
+          </label>
+        </div>
+      </section>
+
+      <section class="shortcuts" aria-label="快捷键设置">
+        <h2>快捷键</h2>
+        <div class="shortcut-grid">
+          <label><span>插入</span><input class="shortcut-input" data-shortcut-action="insert" readonly></label>
+          <label><span>上一页</span><input class="shortcut-input" data-shortcut-action="previous" readonly></label>
+          <label><span>下一页</span><input class="shortcut-input" data-shortcut-action="next" readonly></label>
+          <label><span>恢复/移除</span><input class="shortcut-input" data-shortcut-action="restore" readonly></label>
+          <label><span>一键隐藏</span><input class="shortcut-input" data-shortcut-action="hide" readonly></label>
+        </div>
+        <button id="resetShortcutsButton" class="secondary" type="button">恢复默认快捷键</button>
+      </section>
+
+      <button id="saveButton" type="button">保存设置</button>
+      <button id="clearButton" class="secondary danger" type="button">清除文本</button>
+      <p id="status" class="status" role="status"></p>
+      <p id="progressSummary" class="summary"></p>
+      <p id="fitSummary" class="summary">本页显示：未插入</p>
+    </main>
+
+    <script src="shortcuts.js"></script>
+    <script src="popupState.js"></script>
+    <script src="pageControl.js"></script>
+    <script src="displayMode.js"></script>
+    <script src="textFitting.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
+

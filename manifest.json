@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Intext Reader",
+  "version": "1.0.0",
+  "description": "A local Chrome extension that embeds private reading text into selected webpage text.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "action": {
+    "default_title": "Intext Reader",
+    "default_popup": "src/popup.html"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/readingText.js",
+        "src/pageControl.js",
+        "src/displayMode.js",
+        "src/textFitting.js",
+        "src/shortcuts.js",
+        "src/interactionPolicy.js",
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "intext-insert": {
+      "suggested_key": {
+        "default": "Alt+I"
+      },
+      "description": "Insert current reading page after selected text"
+    },
+    "intext-previous": {
+      "suggested_key": {
+        "default": "Alt+J"
+      },
+      "description": "Show previous reading page"
+    },
+    "intext-next": {
+      "suggested_key": {
+        "default": "Alt+K"
+      },
+      "description": "Show next reading page"
+    },
+    "intext-restore": {
+      "suggested_key": {
+        "default": "Alt+R"
+      },
+      "description": "Remove inserted reading text"
+    },
+    "intext-hide": {
+      "description": "Scroll the page to hide inserted reading text"
+    }
+  }
+}
