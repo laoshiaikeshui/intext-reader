@@ -3,8 +3,8 @@
     readMode: "embedded",
     embedWidthMode: "auto",
     stableWidthEnabled: true,
-    slotWidth: 420,
-    verticalOffset: -0.05,
+    slotWidth: 500,
+    verticalOffset: -0.43,
     autoFitSlotEnabled: true
   };
 

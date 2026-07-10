@@ -21,8 +21,8 @@ assert.deepEqual(
     readMode: "plain",
     embedWidthMode: "auto",
     stableWidthEnabled: false,
-    slotWidth: 420,
-    verticalOffset: -0.05,
+    slotWidth: 500,
+    verticalOffset: -0.43,
     autoFitSlotEnabled: true
   },
   "old disabled stable-width setting maps to plain mode"
@@ -34,8 +34,8 @@ assert.deepEqual(
     readMode: "embedded",
     embedWidthMode: "fixed",
     stableWidthEnabled: true,
-    slotWidth: 420,
-    verticalOffset: -0.05,
+    slotWidth: 500,
+    verticalOffset: -0.43,
     autoFitSlotEnabled: false
   },
   "old fixed width setting maps to embedded fixed mode"
@@ -47,7 +47,7 @@ assert.deepEqual(
     readMode: "embedded",
     embedWidthMode: "auto",
     stableWidthEnabled: true,
-    slotWidth: 420,
+    slotWidth: 500,
     verticalOffset: 0.4,
     autoFitSlotEnabled: true
   },
@@ -60,7 +60,7 @@ assert.deepEqual(
     readMode: "embedded",
     embedWidthMode: "auto",
     stableWidthEnabled: true,
-    slotWidth: 420,
+    slotWidth: 500,
     verticalOffset: -0.8,
     autoFitSlotEnabled: true
   },

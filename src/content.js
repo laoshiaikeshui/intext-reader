@@ -6,11 +6,12 @@ const STORAGE_DEFAULTS = {
   readMode: "embedded",
   embedWidthMode: "auto",
   stableWidthEnabled: true,
-  slotWidth: 420,
+  slotWidth: 500,
   embedLineCount: 1,
-  verticalOffset: -0.05,
+  verticalOffset: -0.43,
   autoFitSlotEnabled: true,
-  keyboardShortcuts: globalThis.IntextReaderShortcuts.DEFAULT_SHORTCUTS
+  keyboardShortcuts: globalThis.IntextReaderShortcuts.DEFAULT_SHORTCUTS,
+  uiLanguage: "auto"
 };
 
 const INSERTED_ATTR = "data-intext-reader-insert";
@@ -35,17 +36,28 @@ const {
 const {
   buildWheelScrollSteps,
   calculateHideScrollDelta,
+  hasScrollPositionChanged,
+  isPageScrollElement,
+  isRectVisibleInViewport,
+  shouldRestoreAfterScroll,
   shouldShowToastForAction
 } = globalThis.IntextReaderInteractionPolicy;
+const { resolveLanguage, translate } = globalThis.IntextReaderI18n;
 
 let insertedNode = null;
 let pageEnabled = true;
 let scrollCheckQueued = false;
+let scrollRestoreContainer = null;
 let toastTimer = null;
 let lastAction = { name: "", time: 0 };
 let offsetHistory = [];
 let lastReadingStatus = { inserted: false };
 let activeShortcuts = normalizeShortcutMap(DEFAULT_SHORTCUTS);
+let activeLanguage = resolveLanguage("auto", navigator.language);
+
+function tr(key, params) {
+  return translate(key, activeLanguage, params);
+}
 
 function storageGet() {
   return chrome.storage.local.get(STORAGE_DEFAULTS);
@@ -124,6 +136,7 @@ function setNoReadingStatus() {
 }
 
 function restoreInsertedNode() {
+  detachScrollRestoreContainer();
   if (insertedNode?.isConnected) {
     insertedNode.remove();
   }
@@ -339,6 +352,7 @@ function renderEmbeddedExcerpt(settings, excerpt) {
 
 function applyExcerptToInsertedNode(settings) {
   if (!insertedNode?.isConnected) {
+    detachScrollRestoreContainer();
     insertedNode = null;
     setNoReadingStatus();
     return false;
@@ -355,13 +369,23 @@ function applyExcerptToInsertedNode(settings) {
 }
 
 function buildInsertToast(status, prefix) {
+  const lineText = status.lineCount > 1 ? tr("lineCount", { count: status.lineCount }) : "";
   if (status.readMode === "embedded") {
-    const widthText = status.effectiveSlotWidth ? `，槽宽${status.effectiveSlotWidth}px` : "";
-    const lineText = status.lineCount > 1 ? `，${status.lineCount}行` : "";
-    return `${prefix} ${status.displayedChars} 字${lineText}${widthText}`;
+    const widthText = status.effectiveSlotWidth
+      ? tr(status.embedWidthMode === "auto" ? "widthAuto" : "widthFixed", {
+          width: status.effectiveSlotWidth,
+          max: status.maxSlotWidth
+        })
+      : "";
+    return tr("insertSummary", {
+      prefix,
+      chars: status.displayedChars,
+      lines: lineText,
+      width: widthText
+    });
   }
 
-  return `${prefix} ${status.displayedChars} 字`;
+  return tr("insertSummary", { prefix, chars: status.displayedChars, lines: "", width: "" });
 }
 
 function getSelectionInsertionRange() {
@@ -385,18 +409,18 @@ async function insertCurrentPage() {
   const excerpt = getExcerpt(settings);
 
   if (!excerpt.novelText) {
-    showToast("先在插件弹窗中保存小说文本");
+    showToast(tr("saveNovelFirst"));
     return;
   }
 
   if (!excerpt.text) {
-    showToast("已经到达文本末尾");
+    showToast(tr("reachedTextEnd"));
     return;
   }
 
   const range = getSelectionInsertionRange();
   if (!range) {
-    showToast("先选中网页中的一段文字");
+    showToast(tr("selectPageText"));
     return;
   }
 
@@ -406,11 +430,12 @@ async function insertCurrentPage() {
   try {
     range.insertNode(insertedNode);
     applyExcerptToInsertedNode(settings);
-    showToast(buildInsertToast(lastReadingStatus, "已插入"));
+    attachScrollRestoreContainer();
+    showToast(buildInsertToast(lastReadingStatus, tr("inserted")));
   } catch (error) {
     insertedNode = null;
     setNoReadingStatus();
-    showToast("当前页面不支持在此处插入");
+    showToast(tr("insertionUnsupported"));
   }
 }
 
@@ -432,7 +457,7 @@ async function movePage(direction) {
   const excerpt = getExcerpt(settings);
 
   if (!excerpt.novelText) {
-    showToast("先在插件弹窗中保存小说文本");
+    showToast(tr("saveNovelFirst"));
     return;
   }
 
@@ -455,10 +480,10 @@ async function movePage(direction) {
   const action = direction > 0 ? "next" : "previous";
   if (applyExcerptToInsertedNode(nextSettings)) {
     if (shouldShowToastForAction(action)) {
-      showToast(buildInsertToast(lastReadingStatus, direction > 0 ? "下一页" : "上一页"));
+      showToast(buildInsertToast(lastReadingStatus, tr(direction > 0 ? "nextPage" : "previousPage")));
     }
   } else if (shouldShowToastForAction(action)) {
-    showToast(`位置已保存：${nextOffset}`);
+    showToast(tr("positionSaved", { offset: nextOffset }));
   }
 }
 
@@ -475,7 +500,7 @@ function isScrollableElement(element) {
 function findScrollContainer(node) {
   let current = node?.parentElement;
   while (current && current !== document.documentElement) {
-    if (isScrollableElement(current)) {
+    if (!isPageScrollElement(current, document) && isScrollableElement(current)) {
       return current;
     }
 
@@ -485,16 +510,20 @@ function findScrollContainer(node) {
   return null;
 }
 
+function getWindowScrollTarget(node) {
+  return {
+    element: null,
+    viewportHeight: window.innerHeight,
+    scrollY: window.scrollY,
+    scrollHeight: document.scrollingElement?.scrollHeight || document.documentElement.scrollHeight,
+    rect: node.getBoundingClientRect()
+  };
+}
+
 function getScrollTargetForNode(node) {
   const container = findScrollContainer(node);
   if (!container) {
-    return {
-      element: null,
-      viewportHeight: window.innerHeight,
-      scrollY: window.scrollY,
-      scrollHeight: document.documentElement.scrollHeight,
-      rect: node.getBoundingClientRect()
-    };
+    return getWindowScrollTarget(node);
   }
 
   const nodeRect = node.getBoundingClientRect();
@@ -512,30 +541,50 @@ function getScrollTargetForNode(node) {
 }
 
 function scrollTargetBy(target, delta) {
+  const before = target.element ? target.element.scrollTop : window.scrollY;
   if (target.element) {
     target.element.scrollTop += delta;
   } else {
     window.scrollBy({ top: delta, left: 0, behavior: "auto" });
   }
+
+  const after = target.element ? target.element.scrollTop : window.scrollY;
+  return hasScrollPositionChanged(before, after);
 }
 
-function hasVisibleClientRect(node, target = getScrollTargetForNode(node)) {
+function hasVisibleClientRect(node) {
   const rects = Array.from(node.getClientRects());
   if (rects.length === 0) {
     return false;
   }
 
-  const viewport = target.element
-    ? target.element.getBoundingClientRect()
-    : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
   return rects.some((rect) => {
-    return (
-      rect.bottom >= viewport.top &&
-      rect.top <= viewport.bottom &&
-      rect.right >= viewport.left &&
-      rect.left <= viewport.right
-    );
+    return isRectVisibleInViewport(rect, {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      margin: 24
+    });
   });
+}
+
+function detachScrollRestoreContainer() {
+  if (scrollRestoreContainer) {
+    scrollRestoreContainer.removeEventListener("scroll", queueScrollRestoreCheck);
+    scrollRestoreContainer = null;
+  }
+}
+
+function attachScrollRestoreContainer() {
+  detachScrollRestoreContainer();
+  if (!insertedNode?.isConnected) {
+    return;
+  }
+
+  const target = getScrollTargetForNode(insertedNode);
+  if (target.element) {
+    scrollRestoreContainer = target.element;
+    scrollRestoreContainer.addEventListener("scroll", queueScrollRestoreCheck, { passive: true });
+  }
 }
 
 function queueScrollRestoreCheck() {
@@ -554,11 +603,14 @@ function queueScrollRestoreCheck() {
 
 function quickHideInsertedNode() {
   if (!insertedNode?.isConnected) {
-    showToast("当前没有插入内容");
+    showToast(tr("noInsertedContent"));
     return;
   }
 
-  const target = getScrollTargetForNode(insertedNode);
+  startQuickHideScroll(getScrollTargetForNode(insertedNode));
+}
+
+function getQuickHideSteps(target) {
   const delta = calculateHideScrollDelta({
     rect: target.rect,
     viewportHeight: target.viewportHeight,
@@ -566,31 +618,58 @@ function quickHideInsertedNode() {
     scrollHeight: target.scrollHeight,
     margin: 80
   });
-  if (!delta) {
-    restoreInsertedNode();
+
+  return buildWheelScrollSteps(delta, { stepCount: 8 });
+}
+
+function startQuickHideScroll(target, usedWindowFallback = false) {
+  const steps = getQuickHideSteps(target);
+  if (steps.length === 0) {
+    if (target.element && !usedWindowFallback) {
+      startQuickHideScroll(getWindowScrollTarget(insertedNode), true);
+    } else {
+      restoreInsertedNode();
+    }
     return;
   }
 
-  runQuickHideScrollSteps(target, buildWheelScrollSteps(delta, { stepCount: 8 }));
+  runQuickHideScrollSteps(target, steps, 0, usedWindowFallback);
 }
 
-function runQuickHideScrollSteps(target, steps, index = 0) {
+function runQuickHideScrollSteps(target, steps, index = 0, usedWindowFallback = false) {
   if (!insertedNode?.isConnected) {
     return;
   }
 
   if (index >= steps.length) {
+    if (shouldRestoreAfterScroll({
+      isVisible: hasVisibleClientRect(insertedNode),
+      attemptsExhausted: true
+    })) {
+      restoreInsertedNode();
+    }
+    return;
+  }
+
+  const moved = scrollTargetBy(target, steps[index]);
+  if (!moved) {
+    if (target.element && !usedWindowFallback) {
+      startQuickHideScroll(getWindowScrollTarget(insertedNode), true);
+    } else {
+      restoreInsertedNode();
+    }
+    return;
+  }
+
+  if (shouldRestoreAfterScroll({
+    isVisible: hasVisibleClientRect(insertedNode),
+    attemptsExhausted: false
+  })) {
     restoreInsertedNode();
     return;
   }
 
-  scrollTargetBy(target, steps[index]);
-  if (!hasVisibleClientRect(insertedNode, target)) {
-    restoreInsertedNode();
-    return;
-  }
-
-  window.setTimeout(() => runQuickHideScrollSteps(target, steps, index + 1), 18);
+  window.setTimeout(() => runQuickHideScrollSteps(target, steps, index + 1, usedWindowFallback), 18);
 }
 function showToast(message) {
   let toast = document.getElementById("intext-reader-toast");
@@ -729,21 +808,25 @@ function runAction(action) {
     movePage(1);
   } else if (action === "restore") {
     restoreInsertedNode();
-    showToast("已恢复");
+    showToast(tr("restored"));
   } else if (action === "hide") {
     quickHideInsertedNode();
   }
 }
 
-function updateShortcutCache(settings) {
+function updateCachedSettings(settings) {
   activeShortcuts = normalizeShortcutMap(settings.keyboardShortcuts);
+  activeLanguage = resolveLanguage(settings.uiLanguage, navigator.language);
 }
 
-storageGet().then(updateShortcutCache);
+storageGet().then(updateCachedSettings);
 if (chrome.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes.keyboardShortcuts) {
       activeShortcuts = normalizeShortcutMap(changes.keyboardShortcuts.newValue);
+    }
+    if (areaName === "local" && changes.uiLanguage) {
+      activeLanguage = resolveLanguage(changes.uiLanguage.newValue, navigator.language);
     }
   });
 }
@@ -770,6 +853,8 @@ window.addEventListener(
 
 window.addEventListener("scroll", queueScrollRestoreCheck, { passive: true, capture: true });
 window.addEventListener("resize", queueScrollRestoreCheck, { passive: true });
+
+
 
 
 

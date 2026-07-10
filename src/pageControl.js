@@ -1,4 +1,5 @@
 (function attachPageControlHelpers(root) {
+  const { translate } = root.IntextReaderI18n || require("./i18n.js");
   const PAGE_ACTIONS = new Set(["insert", "previous", "next", "restore", "hide"]);
   const CONTROL_ACTIONS = new Set(["get-status", "set-enabled"]);
 
@@ -14,20 +15,20 @@
     return false;
   }
 
-  function getPageStatusText(available, enabled) {
+  function getPageStatusText(available, enabled, language = "zh") {
     if (!available) {
-      return "当前页面：不可用";
+      return translate("pageUnavailable", language);
     }
 
-    return enabled ? "当前页面：已启用" : "当前页面：已暂停";
+    return translate(enabled ? "pageEnabled" : "pagePaused", language);
   }
 
-  function getPageToggleText(available, enabled) {
+  function getPageToggleText(available, enabled, language = "zh") {
     if (!available) {
-      return "当前页面不可用";
+      return translate("pageToggleUnavailable", language);
     }
 
-    return enabled ? "暂停当前页面" : "启用当前页面";
+    return translate(enabled ? "pagePause" : "pageEnable", language);
   }
 
   const api = {

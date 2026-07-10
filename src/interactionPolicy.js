@@ -8,6 +8,25 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function isPageScrollElement(element, documentLike = {}) {
+    return Boolean(
+      element &&
+      (element === documentLike.body ||
+        element === documentLike.documentElement ||
+        element === documentLike.scrollingElement)
+    );
+  }
+
+  function hasScrollPositionChanged(before, after, tolerance = 0.5) {
+    const start = parseFiniteNumber(before, 0);
+    const end = parseFiniteNumber(after, start);
+    return Math.abs(end - start) > Math.max(0, parseFiniteNumber(tolerance, 0.5));
+  }
+
+  function shouldRestoreAfterScroll(values = {}) {
+    return !Boolean(values.isVisible) || Boolean(values.attemptsExhausted);
+  }
+
   function pickSignedDistance(options) {
     const {
       downNeeded,
@@ -69,6 +88,26 @@
     });
   }
 
+
+  function isRectVisibleInViewport(rect = {}, values = {}) {
+    const width = parseFiniteNumber(values.width, 0);
+    const height = parseFiniteNumber(values.height, 0);
+    const margin = Math.max(0, parseFiniteNumber(values.margin, 24));
+    if (width <= 0 || height <= 0) {
+      return false;
+    }
+
+    const top = parseFiniteNumber(rect.top, 0);
+    const bottom = parseFiniteNumber(rect.bottom, top);
+    const left = parseFiniteNumber(rect.left, 0);
+    const right = parseFiniteNumber(rect.right, left);
+    return (
+      bottom >= -margin &&
+      top <= height + margin &&
+      right >= -margin &&
+      left <= width + margin
+    );
+  }
   function buildWheelScrollSteps(delta, values = {}) {
     const distance = Math.trunc(parseFiniteNumber(delta, 0));
     if (!distance) {
@@ -92,6 +131,10 @@
   const api = {
     buildWheelScrollSteps,
     calculateHideScrollDelta,
+    hasScrollPositionChanged,
+    isPageScrollElement,
+    isRectVisibleInViewport,
+    shouldRestoreAfterScroll,
     shouldShowToastForAction
   };
 
@@ -101,4 +144,5 @@
 
   root.IntextReaderInteractionPolicy = api;
 })(typeof globalThis !== "undefined" ? globalThis : window);
+
 

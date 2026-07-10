@@ -2,6 +2,10 @@ const assert = require("node:assert/strict");
 const {
   buildWheelScrollSteps,
   calculateHideScrollDelta,
+  hasScrollPositionChanged,
+  isPageScrollElement,
+  isRectVisibleInViewport,
+  shouldRestoreAfterScroll,
   shouldShowToastForAction
 } = require("../src/interactionPolicy.js");
 
@@ -13,6 +17,32 @@ assert.equal(shouldShowToastForAction("insert"), true, "insert keeps the startup
 assert.equal(shouldShowToastForAction("next"), false, "next page does not show a toast");
 assert.equal(shouldShowToastForAction("previous"), false, "previous page does not show a toast");
 assert.equal(shouldShowToastForAction("hide"), false, "one-key hide stays quiet when content exists");
+
+const body = {};
+const html = {};
+const scrollingElement = {};
+const documentLike = { body, documentElement: html, scrollingElement };
+assert.equal(isPageScrollElement(body, documentLike), true, "body uses page scrolling");
+assert.equal(isPageScrollElement(html, documentLike), true, "html uses page scrolling");
+assert.equal(isPageScrollElement(scrollingElement, documentLike), true, "the browser scrolling element uses page scrolling");
+assert.equal(isPageScrollElement({}, documentLike), false, "a normal ancestor can remain an internal scroll container");
+assert.equal(hasScrollPositionChanged(0, 0), false, "unchanged scroll position means scrolling failed");
+assert.equal(hasScrollPositionChanged(0, 120), true, "changed scroll position means scrolling succeeded");
+assert.equal(
+  shouldRestoreAfterScroll({ isVisible: true, attemptsExhausted: false }),
+  false,
+  "visible text stays while another scroll attempt is available"
+);
+assert.equal(
+  shouldRestoreAfterScroll({ isVisible: false, attemptsExhausted: false }),
+  true,
+  "text is restored as soon as it leaves the viewport"
+);
+assert.equal(
+  shouldRestoreAfterScroll({ isVisible: true, attemptsExhausted: true }),
+  true,
+  "direct removal remains the final fallback after scrolling is exhausted"
+);
 
 assert.equal(
   calculateHideScrollDelta({
@@ -89,4 +119,29 @@ assert.equal(upSteps.length, 6, "upward scroll is split into several wheel-like 
 assert.equal(sum(upSteps), -480, "upward wheel steps preserve the full distance");
 assert(upSteps.every((step) => step < 0), "upward wheel steps keep direction");
 
+
+
+assert.equal(
+  isRectVisibleInViewport({ top: 20, bottom: 40, left: 10, right: 80 }, { width: 800, height: 600, margin: 24 }),
+  true,
+  "a rect inside the browser viewport is visible"
+);
+
+assert.equal(
+  isRectVisibleInViewport({ top: -10, bottom: 10, left: 10, right: 80 }, { width: 800, height: 600, margin: 24 }),
+  true,
+  "a rect just past the viewport edge stays visible within tolerance"
+);
+
+assert.equal(
+  isRectVisibleInViewport({ top: -70, bottom: -30, left: 10, right: 80 }, { width: 800, height: 600, margin: 24 }),
+  false,
+  "a rect beyond the top tolerance is hidden"
+);
+
+assert.equal(
+  isRectVisibleInViewport({ top: 630, bottom: 670, left: 10, right: 80 }, { width: 800, height: 600, margin: 24 }),
+  false,
+  "a rect beyond the bottom tolerance is hidden"
+);
 

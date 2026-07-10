@@ -1,4 +1,5 @@
 (function attachPopupStateHelpers(root) {
+  const { translate } = root.IntextReaderI18n || require("./i18n.js");
   const DEFAULT_SHORTCUTS = {
     insert: { altKey: true, ctrlKey: false, shiftKey: false, key: "i" },
     previous: { altKey: true, ctrlKey: false, shiftKey: false, key: "j" },
@@ -15,9 +16,9 @@
     readMode: "embedded",
     embedWidthMode: "auto",
     stableWidthEnabled: true,
-    slotWidth: 420,
+    slotWidth: 500,
     embedLineCount: 1,
-    verticalOffset: -0.05,
+    verticalOffset: -0.43,
     autoFitSlotEnabled: true,
     keyboardShortcuts: DEFAULT_SHORTCUTS
   };
@@ -118,12 +119,16 @@
     };
   }
 
-  function buildProgressSummary(values) {
+  function buildProgressSummary(values, language = "zh") {
     const settings = normalizeSettings(values);
     const total = settings.novelText.length;
     const offset = Math.min(settings.offset, total);
     const percent = total > 0 ? (offset / total) * 100 : 0;
-    return `总字数：${total} | 当前位置：${offset} | 进度：${percent.toFixed(1)}%`;
+    return translate("progressSummary", language, {
+      total,
+      offset,
+      percent: percent.toFixed(1)
+    });
   }
 
   function buildReplacementSettings(novelText, currentValues) {
@@ -144,13 +149,13 @@
     };
   }
 
-  function getSaveErrorMessage(error) {
+  function getSaveErrorMessage(error, language = "zh") {
     const message = error?.message || String(error);
     if (/quota|storage|exceeded/i.test(message)) {
-      return "保存失败：文本太大或浏览器存储空间不足";
+      return translate("saveQuotaError", language);
     }
 
-    return `保存失败：${message}`;
+    return translate("saveError", language, { message });
   }
 
   const api = {

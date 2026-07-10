@@ -1,4 +1,11 @@
 const {
+  DEFAULT_LANGUAGE_PREFERENCE,
+  applyTranslations,
+  normalizeLanguagePreference,
+  resolveLanguage,
+  translate
+} = globalThis.IntextReaderI18n;
+const {
   DEFAULTS,
   DEFAULT_SHORTCUTS,
   buildClearedSettings,
@@ -9,8 +16,8 @@ const {
   normalizeShortcutMap
 } = globalThis.IntextReaderPopupState;
 const {
-  ACTION_LABELS,
   eventToShortcut,
+  getActionLabel,
   getShortcutConflict,
   shortcutToText
 } = globalThis.IntextReaderShortcuts;
@@ -35,6 +42,8 @@ const verticalOffsetInput = document.getElementById("verticalOffset");
 const verticalOffsetValue = document.getElementById("verticalOffsetValue");
 const shortcutInputs = Array.from(document.querySelectorAll(".shortcut-input"));
 const resetShortcutsButton = document.getElementById("resetShortcutsButton");
+const chooseTxtButton = document.getElementById("chooseTxtButton");
+const selectedFileNameEl = document.getElementById("selectedFileName");
 const txtFileInput = document.getElementById("txtFile");
 const saveButton = document.getElementById("saveButton");
 const clearButton = document.getElementById("clearButton");
@@ -43,12 +52,23 @@ const progressSummaryEl = document.getElementById("progressSummary");
 const fitSummaryEl = document.getElementById("fitSummary");
 const pageStatusEl = document.getElementById("pageStatus");
 const togglePageButton = document.getElementById("togglePageButton");
+const languageButtons = Array.from(document.querySelectorAll(".language-button"));
+const versionInfoEl = document.getElementById("versionInfo");
+const extensionVersion = chrome.runtime.getManifest().version;
 
 let activeTabId = null;
 let pageAvailable = false;
 let pageEnabled = true;
+let pageStatusLoaded = false;
 let statusClearTimer = null;
 let shortcutMap = normalizeShortcutMap(DEFAULTS.keyboardShortcuts);
+let languagePreference = DEFAULT_LANGUAGE_PREFERENCE;
+let activeLanguage = resolveLanguage(languagePreference, navigator.language);
+let lastReadingStatus = { inserted: false };
+
+function tr(key, params) {
+  return translate(key, activeLanguage, params);
+}
 
 function showStatus(message, type = "success") {
   window.clearTimeout(statusClearTimer);
@@ -64,8 +84,32 @@ function showStatus(message, type = "success") {
 
 function showPreviewStatus() {
   window.clearTimeout(statusClearTimer);
-  statusEl.textContent = "预览中，保存后固定";
+  statusEl.textContent = tr("previewPending");
   statusEl.classList.remove("error");
+}
+
+function applyLanguagePreference(preference) {
+  languagePreference = normalizeLanguagePreference(preference);
+  activeLanguage = resolveLanguage(languagePreference, navigator.language);
+  applyTranslations(document, activeLanguage);
+  languageButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.language === activeLanguage));
+  });
+  versionInfoEl.textContent = tr("versionLabel", { version: extensionVersion });
+  updateProgressSummary();
+  updateFitSummary(lastReadingStatus);
+  updateDisplaySettingsUi();
+  updatePageStatusUi();
+}
+
+async function selectLanguage(language) {
+  applyLanguagePreference(language);
+  try {
+    await chrome.storage.local.set({ uiLanguage: languagePreference });
+    showStatus(tr("languageSaved"));
+  } catch (error) {
+    showStatus(getSaveErrorMessage(error, activeLanguage), "error");
+  }
 }
 
 function getRadioValue(inputs, fallback) {
@@ -116,11 +160,12 @@ function applySettingsToForm(settings) {
 }
 
 function updateProgressSummary() {
-  progressSummaryEl.textContent = buildProgressSummary(getFormSettings());
+  progressSummaryEl.textContent = buildProgressSummary(getFormSettings(), activeLanguage);
 }
 
 function updateFitSummary(readingStatus) {
-  fitSummaryEl.textContent = buildReadingStatusText(readingStatus);
+  lastReadingStatus = readingStatus || { inserted: false };
+  fitSummaryEl.textContent = buildReadingStatusText(lastReadingStatus, activeLanguage);
 }
 
 function updateDisplaySettingsUi() {
@@ -128,12 +173,19 @@ function updateDisplaySettingsUi() {
   const embedded = settings.readMode === "embedded";
   pageSizeField.classList.toggle("is-hidden", embedded);
   embedSettings.classList.toggle("is-hidden", !embedded);
-  slotWidthLabel.textContent = settings.embedWidthMode === "auto" ? "最大槽宽 px" : "槽宽 px";
+  slotWidthLabel.textContent = tr(settings.embedWidthMode === "auto" ? "maxDisplayWidth" : "displayWidth");
 }
 
 function updatePageStatusUi() {
-  pageStatusEl.textContent = getPageStatusText(pageAvailable, pageEnabled);
-  togglePageButton.textContent = getPageToggleText(pageAvailable, pageEnabled);
+  if (!pageStatusLoaded) {
+    pageStatusEl.textContent = tr("pageStatusDetecting");
+    togglePageButton.textContent = tr("detecting");
+    togglePageButton.disabled = true;
+    return;
+  }
+
+  pageStatusEl.textContent = getPageStatusText(pageAvailable, pageEnabled, activeLanguage);
+  togglePageButton.textContent = getPageToggleText(pageAvailable, pageEnabled, activeLanguage);
   togglePageButton.disabled = !pageAvailable;
 }
 
@@ -162,23 +214,29 @@ async function loadPageStatus() {
   const response = await sendPageMessage({ action: "get-status" });
   pageAvailable = Boolean(response?.ok);
   pageEnabled = response?.pageEnabled !== false;
+  pageStatusLoaded = true;
   updatePageStatusUi();
   updateFitSummary(response?.readingStatus);
 }
 
 async function loadSettings() {
-  const settings = normalizeSettings(await chrome.storage.local.get(DEFAULTS));
+  const storedValues = await chrome.storage.local.get({
+    ...DEFAULTS,
+    uiLanguage: DEFAULT_LANGUAGE_PREFERENCE
+  });
+  applyLanguagePreference(storedValues.uiLanguage);
+  const settings = normalizeSettings(storedValues);
   applySettingsToForm(settings);
 }
 
-async function persistSettings(settings, successMessage = "已保存") {
+async function persistSettings(settings, successMessage = null) {
   try {
     await chrome.storage.local.set(settings);
     applySettingsToForm(settings);
-    showStatus(successMessage);
+    showStatus(successMessage || tr("saved"));
     return true;
   } catch (error) {
-    showStatus(getSaveErrorMessage(error), "error");
+    showStatus(getSaveErrorMessage(error, activeLanguage), "error");
     return false;
   }
 }
@@ -187,7 +245,11 @@ async function saveSettings() {
   const settings = getFormSettings();
   const conflict = getShortcutConflict(settings.keyboardShortcuts);
   if (conflict) {
-    showStatus(`快捷键冲突：${ACTION_LABELS[conflict.firstAction]} 和 ${ACTION_LABELS[conflict.secondAction]} 都是 ${conflict.shortcutText}`, "error");
+    showStatus(tr("shortcutConflict", {
+      first: getActionLabel(conflict.firstAction, activeLanguage),
+      second: getActionLabel(conflict.secondAction, activeLanguage),
+      shortcut: conflict.shortcutText
+    }), "error");
     return;
   }
 
@@ -196,12 +258,12 @@ async function saveSettings() {
 
 async function clearText() {
   const settings = getFormSettings();
-  if (settings.novelText && !window.confirm("清除后会删除当前文本并将阅读位置重置为 0，是否继续？")) {
+  if (settings.novelText && !window.confirm(tr("clearConfirm"))) {
     return;
   }
 
   const clearedSettings = buildClearedSettings(settings);
-  const saved = await persistSettings(clearedSettings, "已清除文本");
+  const saved = await persistSettings(clearedSettings, tr("textCleared"));
   if (saved) {
     const response = await sendPageMessage({ action: "restore" });
     updateFitSummary(response?.readingStatus);
@@ -212,15 +274,14 @@ async function importTextFile(file) {
   const currentSettings = getFormSettings();
   if (
     currentSettings.novelText &&
-    !window.confirm("导入新文本会覆盖当前文本并将阅读位置重置为 0，是否继续？")
+    !window.confirm(tr("importConfirm"))
   ) {
-    txtFileInput.value = "";
     return;
   }
 
   const text = await file.text();
   const nextSettings = buildReplacementSettings(text, currentSettings);
-  const saved = await persistSettings(nextSettings, "已导入并重置进度");
+  const saved = await persistSettings(nextSettings, tr("importedReset"));
   if (saved) {
     const response = await sendPageMessage({ action: "restore" });
     updateFitSummary(response?.readingStatus);
@@ -271,7 +332,7 @@ function captureShortcut(input, event) {
   event.stopPropagation();
   const shortcut = eventToShortcut(event);
   if (!shortcut) {
-    showStatus("快捷键需要包含 Alt、Ctrl 或 Shift", "error");
+    showStatus(tr("shortcutModifierRequired"), "error");
     return;
   }
 
@@ -280,7 +341,7 @@ function captureShortcut(input, event) {
     [input.dataset.shortcutAction]: shortcut
   });
   renderShortcutInputs();
-  showStatus("快捷键已设置，保存后生效");
+  showStatus(tr("shortcutSaved"));
 }
 
 txtFileInput.addEventListener("change", async () => {
@@ -289,16 +350,22 @@ txtFileInput.addEventListener("change", async () => {
     return;
   }
 
-  await importTextFile(file);
-  txtFileInput.value = "";
+  selectedFileNameEl.textContent = file.name;
+  try {
+    await importTextFile(file);
+  } finally {
+    txtFileInput.value = "";
+    selectedFileNameEl.textContent = tr("noFileSelected");
+  }
 });
+chooseTxtButton.addEventListener("click", () => txtFileInput.click());
 
 saveButton.addEventListener("click", saveSettings);
 clearButton.addEventListener("click", clearText);
 resetShortcutsButton.addEventListener("click", () => {
   shortcutMap = normalizeShortcutMap(DEFAULT_SHORTCUTS);
   renderShortcutInputs();
-  showStatus("已恢复默认快捷键，保存后生效");
+  showStatus(tr("shortcutsReset"));
 });
 shortcutInputs.forEach((input) => {
   input.addEventListener("keydown", (event) => captureShortcut(input, event));
@@ -313,7 +380,7 @@ togglePageButton.addEventListener("click", async () => {
     pageAvailable = true;
     pageEnabled = response.pageEnabled !== false;
     updateFitSummary(response.readingStatus);
-    showStatus(pageEnabled ? "当前页面已启用" : "当前页面已暂停");
+    showStatus(tr(pageEnabled ? "pageEnabled" : "pagePaused"));
   }
 
   updatePageStatusUi();
@@ -326,7 +393,11 @@ embedWidthModeInputs.forEach((input) => input.addEventListener("change", preview
 slotWidthInput.addEventListener("input", previewDisplayMode);
 embedLineCountInput.addEventListener("input", previewDisplayMode);
 verticalOffsetInput.addEventListener("input", previewVerticalOffset);
+languageButtons.forEach((button) => {
+  button.addEventListener("click", () => selectLanguage(button.dataset.language));
+});
 
+applyLanguagePreference(DEFAULT_LANGUAGE_PREFERENCE);
 loadSettings();
 loadPageStatus();
 

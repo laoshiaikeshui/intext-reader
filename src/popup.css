@@ -18,6 +18,45 @@ body {
   margin-bottom: 12px;
 }
 
+.header-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.language-switch {
+  display: grid;
+  grid-template-columns: 32px 38px;
+  overflow: hidden;
+  border: 1px solid #cfd5df;
+  border-radius: 6px;
+  background: #fff;
+}
+
+button.language-button {
+  width: 100%;
+  min-height: 28px;
+  border-radius: 0;
+  padding: 4px 6px;
+  color: #5d6675;
+  background: #fff;
+  font-size: 12px;
+}
+
+button.language-button + button.language-button {
+  border-left: 1px solid #cfd5df;
+}
+
+button.language-button:hover {
+  background: #eef2f7;
+}
+
+button.language-button[aria-pressed="true"] {
+  color: #fff;
+  background: #1f6feb;
+}
+
 h1 {
   margin: 0;
   font-size: 18px;
@@ -53,6 +92,30 @@ h1 {
   display: grid;
   gap: 6px;
   margin-bottom: 10px;
+}
+
+.file-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+button.file-picker-button {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.file-row .selected-file-name {
+  overflow: hidden;
+  color: #5d6675;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.native-file-input {
+  display: none;
 }
 
 .display-settings {
@@ -230,6 +293,11 @@ dd {
   font-weight: 600;
 }
 
+.choice-row label > span {
+  color: inherit;
+  font-weight: inherit;
+}
+
 .choice-row input {
   width: auto;
 }
@@ -255,5 +323,30 @@ dd {
 .shortcut-input {
   cursor: pointer;
   background: #fff;
+}
+
+.popup-footer {
+  margin-top: 4px;
+  border-top: 1px solid #d9dee7;
+  padding-top: 8px;
+  color: #7a8392;
+  text-align: center;
+}
+
+.version-info,
+.disclaimer {
+  margin: 0;
+  font-weight: 400;
+}
+
+.version-info {
+  font-size: 11px;
+}
+
+.disclaimer {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 

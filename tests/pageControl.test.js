@@ -18,4 +18,6 @@ assert.equal(getPageStatusText(true, false), "当前页面：已暂停");
 assert.equal(getPageToggleText(false, true), "当前页面不可用");
 assert.equal(getPageToggleText(true, true), "暂停当前页面");
 assert.equal(getPageToggleText(true, false), "启用当前页面");
+assert.equal(getPageStatusText(true, true, "en"), "Current page: Enabled");
+assert.equal(getPageToggleText(true, false, "en"), "Enable on this page");
 

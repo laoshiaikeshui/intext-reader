@@ -9,98 +9,113 @@
   <body>
     <main class="panel">
       <header class="header">
-        <h1>Intext Reader</h1>
-        <p>保存文本后，在网页中选中文字并使用快捷键插入。</p>
+        <div class="header-title-row">
+          <h1>Intext Reader</h1>
+          <div class="language-switch" role="group" aria-label="Interface language">
+            <button class="language-button" type="button" data-language="zh" aria-pressed="false">中</button>
+            <button class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+          </div>
+        </div>
+        <p data-i18n="headerDescription">保存文本后，在网页中选中文字并使用快捷键插入。</p>
       </header>
 
-      <section class="page-control" aria-label="当前页面状态">
-        <p id="pageStatus">当前页面：检测中</p>
-        <button id="togglePageButton" class="secondary" type="button">检测中</button>
+      <section class="page-control" aria-label="当前页面状态" data-i18n-aria-label="pageStatusDetecting">
+        <p id="pageStatus" data-i18n="pageStatusDetecting">当前页面：检测中</p>
+        <button id="togglePageButton" class="secondary" type="button" data-i18n="detecting">检测中</button>
       </section>
 
       <label class="field">
-        <span>小说文本</span>
-        <textarea id="novelText" rows="9" placeholder="在这里粘贴 txt 文本"></textarea>
+        <span data-i18n="novelText">小说文本</span>
+        <textarea id="novelText" rows="9" placeholder="在这里粘贴 txt 文本" data-i18n-placeholder="novelPlaceholder"></textarea>
       </label>
 
-      <label class="file-row">
-        <span>导入 txt</span>
-        <input id="txtFile" type="file" accept=".txt,text/plain">
-      </label>
+      <div class="file-row">
+        <span data-i18n="importTxt">导入 txt</span>
+        <div class="file-picker">
+          <button id="chooseTxtButton" class="secondary file-picker-button" type="button" data-i18n="chooseTxt">选择 TXT</button>
+          <span id="selectedFileName" class="selected-file-name" data-i18n="noFileSelected">未选择文件</span>
+          <input id="txtFile" class="native-file-input" type="file" accept=".txt,text/plain" tabindex="-1" aria-hidden="true">
+        </div>
+      </div>
 
       <div class="grid">
         <label id="pageSizeField" class="field">
-          <span>每页字数</span>
+          <span data-i18n="charsPerPage">每页字数</span>
           <input id="pageSize" type="number" min="1" step="1" value="49">
         </label>
 
         <label class="field">
-          <span>分隔符</span>
+          <span data-i18n="separator">分隔符</span>
           <input id="separator" type="text" value=" ">
         </label>
       </div>
 
       <label class="field">
-        <span>当前位置</span>
+        <span data-i18n="currentPosition">当前位置</span>
         <input id="offset" type="number" min="0" step="1" value="0">
       </label>
 
-      <section class="display-settings" aria-label="显示设置">
+      <section class="display-settings" aria-label="显示设置" data-i18n-aria-label="displaySettings">
         <div class="field">
-          <span>阅读模式</span>
+          <span data-i18n="readingMode">阅读模式</span>
           <div class="choice-row">
-            <label><input type="radio" name="readMode" value="plain">普通插入</label>
-            <label><input type="radio" name="readMode" value="embedded" checked>嵌入阅读</label>
+            <label><input type="radio" name="readMode" value="plain"><span data-i18n="plainInsertion">普通插入</span></label>
+            <label><input type="radio" name="readMode" value="embedded" checked><span data-i18n="embeddedReading">嵌入阅读</span></label>
           </div>
         </div>
 
         <div id="embedSettings">
           <div class="field">
-            <span>嵌入方式</span>
+            <span data-i18n="embedMethod">嵌入方式</span>
             <div class="choice-row">
-              <label><input type="radio" name="embedWidthMode" value="fixed">固定宽度</label>
-              <label><input type="radio" name="embedWidthMode" value="auto" checked>自动贴合</label>
+              <label><input type="radio" name="embedWidthMode" value="fixed"><span data-i18n="fixedWidth">固定宽度</span></label>
+              <label><input type="radio" name="embedWidthMode" value="auto" checked><span data-i18n="autoFit">自动贴合</span></label>
             </div>
           </div>
 
           <div class="grid">
             <label id="slotWidthField" class="field">
-              <span id="slotWidthLabel">最大槽宽 px</span>
-              <input id="slotWidth" type="number" min="40" step="10" value="420">
+              <span id="slotWidthLabel" data-i18n="maxDisplayWidth">最大显示宽度（px）</span>
+              <input id="slotWidth" type="number" min="40" step="10" value="500">
             </label>
 
             <label class="field">
-              <span>嵌入行数</span>
+              <span data-i18n="displayLines">显示行数</span>
               <input id="embedLineCount" type="number" min="1" max="3" step="1" value="1">
             </label>
           </div>
 
           <label id="verticalOffsetField" class="field">
-            <span>垂直校正 <output id="verticalOffsetValue">-0.05em</output></span>
-            <input id="verticalOffset" type="range" min="-0.8" max="0.4" step="0.01" value="-0.05">
+            <span><span data-i18n="textVerticalPosition">文字上下位置</span> <output id="verticalOffsetValue">-0.43em</output></span>
+            <input id="verticalOffset" type="range" min="-0.8" max="0.4" step="0.01" value="-0.43">
           </label>
         </div>
       </section>
 
-      <section class="shortcuts" aria-label="快捷键设置">
-        <h2>快捷键</h2>
+      <section class="shortcuts" aria-label="快捷键设置" data-i18n-aria-label="shortcutSettings">
+        <h2 data-i18n="shortcuts">快捷键</h2>
         <div class="shortcut-grid">
-          <label><span>插入</span><input class="shortcut-input" data-shortcut-action="insert" readonly></label>
-          <label><span>上一页</span><input class="shortcut-input" data-shortcut-action="previous" readonly></label>
-          <label><span>下一页</span><input class="shortcut-input" data-shortcut-action="next" readonly></label>
-          <label><span>恢复/移除</span><input class="shortcut-input" data-shortcut-action="restore" readonly></label>
-          <label><span>一键隐藏</span><input class="shortcut-input" data-shortcut-action="hide" readonly></label>
+          <label><span data-i18n="actionInsert">插入</span><input class="shortcut-input" data-shortcut-action="insert" readonly></label>
+          <label><span data-i18n="actionPrevious">上一页</span><input class="shortcut-input" data-shortcut-action="previous" readonly></label>
+          <label><span data-i18n="actionNext">下一页</span><input class="shortcut-input" data-shortcut-action="next" readonly></label>
+          <label><span data-i18n="actionRestore">恢复/移除</span><input class="shortcut-input" data-shortcut-action="restore" readonly></label>
+          <label><span data-i18n="actionHide">一键隐藏</span><input class="shortcut-input" data-shortcut-action="hide" readonly></label>
         </div>
-        <button id="resetShortcutsButton" class="secondary" type="button">恢复默认快捷键</button>
+        <button id="resetShortcutsButton" class="secondary" type="button" data-i18n="resetShortcuts">恢复默认快捷键</button>
       </section>
 
-      <button id="saveButton" type="button">保存设置</button>
-      <button id="clearButton" class="secondary danger" type="button">清除文本</button>
+      <button id="saveButton" type="button" data-i18n="saveSettings">保存设置</button>
+      <button id="clearButton" class="secondary danger" type="button" data-i18n="clearText">清除文本</button>
       <p id="status" class="status" role="status"></p>
       <p id="progressSummary" class="summary"></p>
-      <p id="fitSummary" class="summary">本页显示：未插入</p>
+      <p id="fitSummary" class="summary" data-i18n="fitNotInserted">本页显示：未插入</p>
+      <footer class="popup-footer">
+        <p id="versionInfo" class="version-info"></p>
+        <p class="disclaimer" data-i18n="disclaimer">仅供本地个人阅读使用，请遵守网站规则及适用法律。</p>
+      </footer>
     </main>
 
+    <script src="i18n.js"></script>
     <script src="shortcuts.js"></script>
     <script src="popupState.js"></script>
     <script src="pageControl.js"></script>

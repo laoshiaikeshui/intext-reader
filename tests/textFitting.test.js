@@ -103,7 +103,7 @@ assert.equal(
     effectiveSlotWidth: 420,
     maxSlotWidth: 420
   }),
-  "本槽显示：38字，槽宽420px"
+  "本页显示：38字，显示宽度420px"
 );
 
 assert.equal(
@@ -115,7 +115,7 @@ assert.equal(
     effectiveSlotWidth: 260,
     maxSlotWidth: 420
   }),
-  "本槽显示：28字，槽宽260/最大420px"
+  "本页显示：28字，实际宽度260px，上限420px"
 );
 
 const lines = fitTextAcrossLines("abcdefghijkl", [3, 4, 2], (lineText, width) => lineText.length <= width);
@@ -142,7 +142,18 @@ assert.equal(
     effectiveSlotWidth: 260,
     maxSlotWidth: 420
   }),
-  "本槽显示：86字，3行，槽宽260/最大420px"
+  "本页显示：86字，3行，实际宽度260px，上限420px"
+);
+assert.equal(
+  buildReadingStatusText({
+    inserted: true,
+    readMode: "embedded",
+    embedWidthMode: "auto",
+    displayedChars: 28,
+    effectiveSlotWidth: 260,
+    maxSlotWidth: 420
+  }, "en"),
+  "Displayed: 28 chars, actual width 260px, limit 420px"
 );
 const indexedLines = fitTextAcrossLines("abcdef", [3, 3, 3], (lineText, width, index) => {
   return width === 3 && lineText.length <= index + 1;

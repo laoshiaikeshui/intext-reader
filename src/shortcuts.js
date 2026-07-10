@@ -1,4 +1,5 @@
 (function attachShortcutHelpers(root) {
+  const { translate } = root.IntextReaderI18n || require("./i18n.js");
   const DEFAULT_SHORTCUTS = {
     insert: { altKey: true, ctrlKey: false, shiftKey: false, key: "i" },
     previous: { altKey: true, ctrlKey: false, shiftKey: false, key: "j" },
@@ -14,6 +15,17 @@
     restore: "恢复/移除",
     hide: "一键隐藏"
   };
+
+  function getActionLabel(action, language = "zh") {
+    const key = {
+      insert: "actionInsert",
+      previous: "actionPrevious",
+      next: "actionNext",
+      restore: "actionRestore",
+      hide: "actionHide"
+    }[action];
+    return key ? translate(key, language) : action;
+  }
 
   function normalizeKey(key) {
     const value = String(key || "").trim();
@@ -128,6 +140,7 @@
     ACTION_LABELS,
     DEFAULT_SHORTCUTS,
     eventToShortcut,
+    getActionLabel,
     getActionForShortcut,
     getShortcutConflict,
     normalizeShortcut,

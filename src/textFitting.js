@@ -1,4 +1,5 @@
 (function attachTextFittingHelpers(root) {
+  const { translate } = root.IntextReaderI18n || require("./i18n.js");
   const DEFAULT_MIN_SLOT_WIDTH = 120;
   const READ_MODES = new Set(["plain", "embedded"]);
   const EMBED_WIDTH_MODES = new Set(["fixed", "auto"]);
@@ -136,33 +137,37 @@
     return { lines, displayedChars: offset };
   }
 
-  function formatWidthStatus(status) {
+  function formatWidthStatus(status, language) {
     const effectiveSlotWidth = Number.parseInt(status.effectiveSlotWidth, 10);
     const maxSlotWidth = Number.parseInt(status.maxSlotWidth, 10);
     if (!Number.isFinite(effectiveSlotWidth) || effectiveSlotWidth <= 0) {
       return "";
     }
 
-    if (status.embedWidthMode === "auto" && Number.isFinite(maxSlotWidth) && maxSlotWidth > 0 && maxSlotWidth !== effectiveSlotWidth) {
-      return `，槽宽${effectiveSlotWidth}/最大${maxSlotWidth}px`;
+    if (status.embedWidthMode === "auto" && Number.isFinite(maxSlotWidth) && maxSlotWidth > 0) {
+      return translate("widthAuto", language, { width: effectiveSlotWidth, max: maxSlotWidth });
     }
 
-    return `，槽宽${effectiveSlotWidth}px`;
+    return translate("widthFixed", language, { width: effectiveSlotWidth });
   }
 
-  function buildReadingStatusText(status) {
+  function buildReadingStatusText(status, language = "zh") {
     if (!status?.inserted) {
-      return "本页显示：未插入";
+      return translate("fitNotInserted", language);
     }
 
     const displayedChars = Number.parseInt(status.displayedChars, 10) || 0;
     if (status.readMode === "embedded") {
       const lineCount = Number.parseInt(status.lineCount, 10) || 1;
-      const lineText = lineCount > 1 ? `，${lineCount}行` : "";
-      return `本槽显示：${displayedChars}字${lineText}${formatWidthStatus(status)}`;
+      const lineText = lineCount > 1 ? translate("lineCount", language, { count: lineCount }) : "";
+      return translate("fitEmbedded", language, {
+        chars: displayedChars,
+        lines: lineText,
+        width: formatWidthStatus(status, language)
+      });
     }
 
-    return `本页显示：${displayedChars}字`;
+    return translate("fitPlain", language, { chars: displayedChars });
   }
 
   const api = {
