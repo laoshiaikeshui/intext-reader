@@ -92,13 +92,17 @@ assert.deepEqual(
     embedWidthMode: "auto",
     stableWidthEnabled: true,
     slotWidth: 500,
-    embedLineCount: 3,
+    embedLineCount: 9,
     verticalOffset: 0.4,
     autoFitSlotEnabled: true,
     keyboardShortcuts: DEFAULT_SHORTCUTS
   },
-  "vertical correction and line count are clamped"
+  "line counts up to ten are preserved while vertical correction is clamped"
 );
+
+assert.equal(normalizeSettings({ embedLineCount: "99" }).embedLineCount, 10);
+assert.equal(normalizeSettings({ slotWidth: "1" }).slotWidth, 1);
+assert.equal(normalizeSettings({ slotWidth: "0" }).slotWidth, 1);
 
 assert.equal(
   buildProgressSummary({ novelText: "abcdefghij", offset: 5 }),

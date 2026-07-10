@@ -22,6 +22,8 @@ assert.equal(translate("chooseTxt", "zh"), "选择 TXT");
 assert.equal(translate("chooseTxt", "en"), "Choose TXT");
 assert.equal(translate("noFileSelected", "zh"), "未选择文件");
 assert.equal(translate("noFileSelected", "en"), "No file selected");
+assert.equal(translate("widthTooSmall", "zh"), "当前宽度过小，无法完整显示文字");
+assert.equal(translate("widthTooSmall", "en"), "The current width is too small to display text completely");
 assert.equal(translate("versionLabel", "zh", { version: "1.1.0" }), "版本：v1.1.0");
 assert.equal(translate("versionLabel", "en", { version: "1.1.0" }), "Version: v1.1.0");
 assert.equal(

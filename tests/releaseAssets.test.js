@@ -6,8 +6,9 @@ const root = path.resolve(__dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
 const popupHtml = fs.readFileSync(path.join(root, "src", "popup.html"), "utf8");
 const popupCss = fs.readFileSync(path.join(root, "src", "popup.css"), "utf8");
+const contentJs = fs.readFileSync(path.join(root, "src", "content.js"), "utf8");
 
-assert.equal(manifest.version, "1.1.0");
+assert.equal(manifest.version, "1.2.0");
 assert(popupHtml.includes('data-language="zh"'));
 assert(popupHtml.includes('data-language="en"'));
 assert(popupHtml.includes('data-i18n="embeddedReading"'));
@@ -17,12 +18,17 @@ assert(popupHtml.includes('id="chooseTxtButton"'));
 assert(popupHtml.includes('data-i18n="chooseTxt"'));
 assert(popupHtml.includes('id="selectedFileName"'));
 assert(popupHtml.includes('data-i18n="noFileSelected"'));
+assert(popupHtml.includes('id="slotWidthWarning"'));
+assert(popupHtml.includes('data-i18n="widthTooSmall"'));
+assert(popupHtml.includes('id="slotWidth" type="number" min="1"'));
+assert(popupHtml.includes('id="embedLineCount" type="number" min="1" max="10"'));
 assert(popupHtml.includes('class="native-file-input"'));
 assert(popupCss.includes(".native-file-input"));
 assert(popupHtml.includes('id="versionInfo"'));
 assert(popupHtml.includes('data-i18n="disclaimer"'));
 assert(!popupHtml.includes("版本：v1.1.0"));
 assert(popupCss.includes(".popup-footer"));
+assert(!contentJs.includes("DEFAULT_MIN_SLOT_WIDTH"));
 assert(popupHtml.indexOf('src="i18n.js"') < popupHtml.indexOf('src="popupState.js"'));
 
 const contentScripts = manifest.content_scripts[0].js;

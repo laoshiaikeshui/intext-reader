@@ -33,6 +33,11 @@
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
 
+  function parseIntegerAtLeast(value, fallback, min) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? Math.max(min, parsed) : fallback;
+  }
+
   function parseIntegerInRange(value, fallback, min, max) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) {
@@ -106,8 +111,8 @@
       readMode,
       embedWidthMode,
       stableWidthEnabled: readMode === "embedded",
-      slotWidth: parsePositiveInteger(values.slotWidth, DEFAULTS.slotWidth),
-      embedLineCount: parseIntegerInRange(values.embedLineCount, DEFAULTS.embedLineCount, 1, 3),
+      slotWidth: parseIntegerAtLeast(values.slotWidth, DEFAULTS.slotWidth, 1),
+      embedLineCount: parseIntegerInRange(values.embedLineCount, DEFAULTS.embedLineCount, 1, 10),
       verticalOffset: parseNumberInRange(
         values.verticalOffset,
         DEFAULTS.verticalOffset,

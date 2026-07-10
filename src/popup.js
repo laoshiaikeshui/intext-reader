@@ -25,7 +25,7 @@ const {
   getPageStatusText,
   getPageToggleText
 } = globalThis.IntextReaderPageControl;
-const { buildReadingStatusText } = globalThis.IntextReaderTextFitting;
+const { buildReadingStatusText, shouldShowWidthWarning } = globalThis.IntextReaderTextFitting;
 
 const novelTextInput = document.getElementById("novelText");
 const pageSizeField = document.getElementById("pageSizeField");
@@ -37,6 +37,7 @@ const embedWidthModeInputs = Array.from(document.querySelectorAll("input[name='e
 const embedSettings = document.getElementById("embedSettings");
 const slotWidthLabel = document.getElementById("slotWidthLabel");
 const slotWidthInput = document.getElementById("slotWidth");
+const slotWidthWarning = document.getElementById("slotWidthWarning");
 const embedLineCountInput = document.getElementById("embedLineCount");
 const verticalOffsetInput = document.getElementById("verticalOffset");
 const verticalOffsetValue = document.getElementById("verticalOffsetValue");
@@ -166,6 +167,7 @@ function updateProgressSummary() {
 function updateFitSummary(readingStatus) {
   lastReadingStatus = readingStatus || { inserted: false };
   fitSummaryEl.textContent = buildReadingStatusText(lastReadingStatus, activeLanguage);
+  slotWidthWarning.classList.toggle("is-hidden", !shouldShowWidthWarning(lastReadingStatus));
 }
 
 function updateDisplaySettingsUi() {

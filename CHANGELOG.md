@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0 - 2026-07-10
+
+- Expanded embedded display lines from 1–3 to 1–10.
+- Reduced the minimum display width from 40 px to 1 px.
+- Removed the fixed 120 px minimum from automatic width fitting.
+- Prevented unreadable characters from being consumed when the configured width is too small.
+- Added a localized popup-only warning, available after insertion, for widths that cannot display complete text.
+- Updated embedded status to report the final rendered width.
+
 ## v1.1.0 - 2026-07-10
 
 - Added an instant Chinese/English interface switch with saved preference.

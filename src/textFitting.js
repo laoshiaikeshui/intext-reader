@@ -1,6 +1,5 @@
 (function attachTextFittingHelpers(root) {
   const { translate } = root.IntextReaderI18n || require("./i18n.js");
-  const DEFAULT_MIN_SLOT_WIDTH = 120;
   const READ_MODES = new Set(["plain", "embedded"]);
   const EMBED_WIDTH_MODES = new Set(["fixed", "auto"]);
 
@@ -36,12 +35,43 @@
     }
 
     const remainingLineWidth = Math.floor(parsePositiveNumber(values.remainingLineWidth, slotWidth));
-    const minSlotWidth = Math.round(parsePositiveNumber(values.minSlotWidth, DEFAULT_MIN_SLOT_WIDTH));
-    if (remainingLineWidth < minSlotWidth) {
-      return slotWidth;
+    return Math.max(1, Math.min(slotWidth, remainingLineWidth));
+  }
+
+  function resolveAutoFirstLineWidth(values = {}) {
+    const maxSlotWidth = Math.max(1, Math.round(parsePositiveNumber(values.maxSlotWidth, 1)));
+    const effectiveSlotWidth = Math.max(
+      1,
+      Math.min(maxSlotWidth, Math.round(parsePositiveNumber(values.effectiveSlotWidth, maxSlotWidth)))
+    );
+    if (values.firstCharacterFits || effectiveSlotWidth >= maxSlotWidth) {
+      return effectiveSlotWidth;
     }
 
-    return Math.max(minSlotWidth, Math.min(slotWidth, remainingLineWidth));
+    return maxSlotWidth;
+  }
+
+  function resolveRenderedSlotWidth(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+  }
+
+  function shouldShowWidthWarning(status = {}) {
+    return Boolean(status.inserted && status.readMode === "embedded" && status.widthTooSmall);
+  }
+
+  function resolvePageStep(values = {}) {
+    const pageSize = Math.max(0, Number.parseInt(values.pageSize, 10) || 0);
+    const status = values.readingStatus || {};
+    if (
+      values.readMode === "embedded" &&
+      status.inserted &&
+      Number(status.offset) === Number(values.offset)
+    ) {
+      return Math.max(0, Number.parseInt(status.displayedChars, 10) || 0);
+    }
+
+    return pageSize;
   }
 
   function findFittingLength(text, maxLength, fitsText) {
@@ -73,7 +103,7 @@
       }
     }
 
-    return best > 0 ? best : 1;
+    return best;
   }
 
   function findFittingLengthByGrowth(text, fitsText) {
@@ -83,7 +113,7 @@
     }
 
     if (!fitsText(source.slice(0, 1))) {
-      return 1;
+      return 0;
     }
 
     let low = 1;
@@ -126,12 +156,13 @@
 
       const remaining = source.slice(offset);
       const length = findFittingLengthByGrowth(remaining, (candidate) => fitsText(candidate, width, index));
-      const lineText = remaining.slice(0, length);
-      lines.push({ text: lineText, width });
-      offset += length;
       if (length <= 0) {
         break;
       }
+
+      const lineText = remaining.slice(0, length);
+      lines.push({ text: lineText, width });
+      offset += length;
     }
 
     return { lines, displayedChars: offset };
@@ -171,12 +202,15 @@
   }
 
   const api = {
-    DEFAULT_MIN_SLOT_WIDTH,
     buildReadingStatusText,
     findFittingLength,
     findFittingLengthByGrowth,
     fitTextAcrossLines,
     normalizeFitSettings,
+    resolveAutoFirstLineWidth,
+    resolvePageStep,
+    resolveRenderedSlotWidth,
+    shouldShowWidthWarning,
     resolveEffectiveSlotWidth
   };
 

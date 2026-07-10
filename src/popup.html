@@ -76,12 +76,13 @@
           <div class="grid">
             <label id="slotWidthField" class="field">
               <span id="slotWidthLabel" data-i18n="maxDisplayWidth">最大显示宽度（px）</span>
-              <input id="slotWidth" type="number" min="40" step="10" value="500">
+              <input id="slotWidth" type="number" min="1" step="1" value="500">
+              <span id="slotWidthWarning" class="field-warning is-hidden" data-i18n="widthTooSmall">当前宽度过小，无法完整显示文字</span>
             </label>
 
             <label class="field">
               <span data-i18n="displayLines">显示行数</span>
-              <input id="embedLineCount" type="number" min="1" max="3" step="1" value="1">
+              <input id="embedLineCount" type="number" min="1" max="10" step="1" value="1">
             </label>
           </div>
 

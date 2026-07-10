@@ -5,6 +5,10 @@ const {
   findFittingLengthByGrowth,
   fitTextAcrossLines,
   normalizeFitSettings,
+  resolveAutoFirstLineWidth,
+  resolvePageStep,
+  resolveRenderedSlotWidth,
+  shouldShowWidthWarning,
   resolveEffectiveSlotWidth
 } = require("../src/textFitting.js");
 
@@ -31,8 +35,7 @@ assert.equal(
     readMode: "embedded",
     embedWidthMode: "fixed",
     slotWidth: 420,
-    remainingLineWidth: 260,
-    minSlotWidth: 120
+    remainingLineWidth: 260
   }),
   420,
   "fixed width keeps the user slot width"
@@ -43,8 +46,7 @@ assert.equal(
     readMode: "embedded",
     embedWidthMode: "auto",
     slotWidth: 420,
-    remainingLineWidth: 260,
-    minSlotWidth: 120
+    remainingLineWidth: 260
   }),
   260,
   "auto fit shrinks to the current line remaining width"
@@ -55,11 +57,64 @@ assert.equal(
     readMode: "embedded",
     embedWidthMode: "auto",
     slotWidth: 420,
-    remainingLineWidth: 80,
-    minSlotWidth: 120
+    remainingLineWidth: 80
   }),
-  420,
-  "too-small current line falls back to max slot width"
+  80,
+  "auto fit uses narrow remaining space without an arbitrary minimum"
+);
+
+assert.equal(
+  resolveEffectiveSlotWidth({
+    readMode: "embedded",
+    embedWidthMode: "auto",
+    slotWidth: 40,
+    remainingLineWidth: 260
+  }),
+  40,
+  "auto fit never expands beyond the user width"
+);
+
+assert.equal(
+  resolveEffectiveSlotWidth({
+    readMode: "embedded",
+    embedWidthMode: "auto",
+    slotWidth: 500,
+    remainingLineWidth: 1
+  }),
+  1,
+  "auto fit accepts a one-pixel remaining width"
+);
+
+assert.equal(
+  resolveAutoFirstLineWidth({ effectiveSlotWidth: 16, maxSlotWidth: 500, firstCharacterFits: true }),
+  16,
+  "a narrow first line is kept when it can display a complete character"
+);
+
+assert.equal(
+  resolveAutoFirstLineWidth({ effectiveSlotWidth: 3, maxSlotWidth: 500, firstCharacterFits: false }),
+  500,
+  "a first line that cannot display one character uses the full width and wraps"
+);
+
+assert.equal(
+  resolveAutoFirstLineWidth({ effectiveSlotWidth: 1, maxSlotWidth: 1, firstCharacterFits: false }),
+  1,
+  "an explicitly tiny maximum width is preserved for validation"
+);
+
+assert.equal(resolveRenderedSlotWidth(319.6), 320, "status reports the rounded rendered width");
+assert.equal(resolveRenderedSlotWidth(0), 0, "an invisible slot reports zero width");
+
+assert.equal(
+  shouldShowWidthWarning({ inserted: true, readMode: "embedded", widthTooSmall: true }),
+  true,
+  "the popup warns when embedded text cannot display one character"
+);
+assert.equal(
+  shouldShowWidthWarning({ inserted: true, readMode: "plain", widthTooSmall: true }),
+  false,
+  "plain insertion never shows the embedded-width warning"
 );
 
 assert.equal(
@@ -76,8 +131,14 @@ assert.equal(
 
 assert.equal(
   findFittingLength("abcdef", 50, () => false),
-  1,
-  "fit length keeps at least one visible character"
+  0,
+  "fit length does not consume a character that cannot be displayed"
+);
+
+assert.equal(
+  findFittingLengthByGrowth("abcdef", () => false),
+  0,
+  "growth fitting does not consume a character that cannot be displayed"
 );
 
 assert.equal(
@@ -130,6 +191,45 @@ assert.deepEqual(
     displayedChars: 9
   },
   "embedded multiline fitting consumes text line by line"
+);
+
+assert.deepEqual(
+  fitTextAcrossLines("abcdef", [1], () => false),
+  { lines: [], displayedChars: 0 },
+  "a width that cannot fit one character leaves the reading position unchanged"
+);
+
+assert.equal(
+  resolvePageStep({
+    readMode: "embedded",
+    pageSize: 49,
+    offset: 100,
+    readingStatus: { inserted: true, offset: 100, displayedChars: 0 }
+  }),
+  0,
+  "embedded next-page navigation does not skip text when nothing was displayed"
+);
+
+assert.equal(
+  resolvePageStep({
+    readMode: "embedded",
+    pageSize: 49,
+    offset: 100,
+    readingStatus: { inserted: true, offset: 100, displayedChars: 38 }
+  }),
+  38,
+  "embedded next-page navigation advances by the rendered character count"
+);
+
+assert.equal(
+  resolvePageStep({
+    readMode: "plain",
+    pageSize: 49,
+    offset: 100,
+    readingStatus: { inserted: true, offset: 100, displayedChars: 38 }
+  }),
+  49,
+  "plain insertion keeps its configured page size"
 );
 
 assert.equal(

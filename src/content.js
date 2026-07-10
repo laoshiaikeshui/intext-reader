@@ -15,6 +15,7 @@ const STORAGE_DEFAULTS = {
 };
 
 const INSERTED_ATTR = "data-intext-reader-insert";
+const MIN_WIDTH_CONTAINER = 120;
 const { formatInsertedText, renderSeparator } = globalThis.IntextReaderText;
 const { canRunPageAction } = globalThis.IntextReaderPageControl;
 const {
@@ -22,9 +23,11 @@ const {
   normalizeDisplaySettings
 } = globalThis.IntextReaderDisplayMode;
 const {
-  DEFAULT_MIN_SLOT_WIDTH,
   fitTextAcrossLines,
   normalizeFitSettings,
+  resolveAutoFirstLineWidth,
+  resolvePageStep,
+  resolveRenderedSlotWidth,
   resolveEffectiveSlotWidth
 } = globalThis.IntextReaderTextFitting;
 const {
@@ -86,7 +89,7 @@ function normalizedEmbedLineCount(value) {
     return 1;
   }
 
-  return Math.min(3, Math.max(1, parsed));
+  return Math.min(10, Math.max(1, parsed));
 }
 
 function getMode(settings) {
@@ -127,6 +130,7 @@ function buildReadingStatus(values = {}) {
     lineCount: values.lineCount || 1,
     effectiveSlotWidth: values.effectiveSlotWidth || 0,
     maxSlotWidth: values.maxSlotWidth || 0,
+    widthTooSmall: Boolean(values.widthTooSmall),
     offset: values.offset || 0
   };
 }
@@ -198,7 +202,7 @@ function findWidthContainer(node) {
   while (current && current !== document.documentElement) {
     const rect = current.getBoundingClientRect();
     const display = window.getComputedStyle(current).display;
-    if (rect.width > DEFAULT_MIN_SLOT_WIDTH && !display.startsWith("inline")) {
+    if (rect.width > MIN_WIDTH_CONTAINER && !display.startsWith("inline")) {
       return current;
     }
 
@@ -258,8 +262,7 @@ function resolveFirstSlotWidth(settings) {
     readMode: displaySettings.readMode,
     embedWidthMode: displaySettings.embedWidthMode,
     slotWidth: displaySettings.slotWidth,
-    remainingLineWidth,
-    minSlotWidth: DEFAULT_MIN_SLOT_WIDTH
+    remainingLineWidth
   });
 
   return {
@@ -319,6 +322,19 @@ function renderEmbeddedExcerpt(settings, excerpt) {
   });
 
   const separator = renderSeparator(settings.separator);
+  if (isAutoEmbedMode(settings) && excerpt.text) {
+    const firstCharacterFits = lineFitsText(lineNodes[0], excerpt.text.slice(0, 1), separator, "");
+    const resolvedWidth = resolveAutoFirstLineWidth({
+      effectiveSlotWidth: widths[0],
+      maxSlotWidth: firstSlot.maxSlotWidth,
+      firstCharacterFits
+    });
+    if (resolvedWidth !== widths[0]) {
+      widths[0] = resolvedWidth;
+      applySlotStyle(lineNodes[0], settings, resolvedWidth);
+    }
+  }
+
   const fit = fitTextAcrossLines(excerpt.text, widths, (candidate, width, index) => {
     const line = lineNodes[index];
     const prefix = index === 0 ? separator : "";
@@ -326,6 +342,7 @@ function renderEmbeddedExcerpt(settings, excerpt) {
   });
 
   insertedNode.textContent = "";
+  let firstRenderedLine = null;
   fit.lines.forEach((lineData, index) => {
     if (index > 0) {
       insertedNode.appendChild(document.createElement("br"));
@@ -336,7 +353,10 @@ function renderEmbeddedExcerpt(settings, excerpt) {
     const suffix = index === fit.lines.length - 1 ? separator : "";
     line.textContent = `${prefix}${lineData.text}${suffix}`;
     insertedNode.appendChild(line);
+    firstRenderedLine ||= line;
   });
+
+  const widthTooSmall = Boolean(excerpt.text) && fit.displayedChars === 0;
 
   lastReadingStatus = buildReadingStatus({
     inserted: true,
@@ -344,8 +364,11 @@ function renderEmbeddedExcerpt(settings, excerpt) {
     embedWidthMode: mode.embedWidthMode,
     displayedChars: fit.displayedChars,
     lineCount: Math.max(1, fit.lines.length),
-    effectiveSlotWidth: firstSlot.effectiveSlotWidth,
+    effectiveSlotWidth: resolveRenderedSlotWidth(
+      firstRenderedLine ? getVisibleSlotWidth(firstRenderedLine) : 0
+    ),
     maxSlotWidth: firstSlot.maxSlotWidth,
+    widthTooSmall,
     offset: excerpt.offset
   });
 }
@@ -431,7 +454,9 @@ async function insertCurrentPage() {
     range.insertNode(insertedNode);
     applyExcerptToInsertedNode(settings);
     attachScrollRestoreContainer();
-    showToast(buildInsertToast(lastReadingStatus, tr("inserted")));
+    if (!lastReadingStatus.widthTooSmall) {
+      showToast(buildInsertToast(lastReadingStatus, tr("inserted")));
+    }
   } catch (error) {
     insertedNode = null;
     setNoReadingStatus();
@@ -440,16 +465,12 @@ async function insertCurrentPage() {
 }
 
 function getForwardStep(settings, excerpt) {
-  if (
-    isEmbeddedMode(settings) &&
-    lastReadingStatus.inserted &&
-    lastReadingStatus.offset === excerpt.offset &&
-    lastReadingStatus.displayedChars > 0
-  ) {
-    return lastReadingStatus.displayedChars;
-  }
-
-  return excerpt.pageSize;
+  return resolvePageStep({
+    readMode: getMode(settings).readMode,
+    pageSize: excerpt.pageSize,
+    offset: excerpt.offset,
+    readingStatus: lastReadingStatus
+  });
 }
 
 async function movePage(direction) {

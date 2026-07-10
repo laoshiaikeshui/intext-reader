@@ -24,7 +24,7 @@ Intext Reader 主要解决两个问题：
 - 支持固定字数的普通插入；
 - 支持限制显示宽度的嵌入阅读；
 - 支持固定宽度和自动贴合两种嵌入方式；
-- 支持一至三行嵌入显示；
+- 支持一至十行嵌入显示；
 - 支持实时预览显示宽度和文字上下位置；
 - 支持自定义前后分隔符；
 - 支持上一页、下一页、恢复和一键隐藏；
@@ -77,7 +77,7 @@ Intext Reader 主要解决两个问题：
 
 - 设置最大显示宽度；
 - 选择固定宽度或自动贴合；
-- 设置一至三行显示；
+- 设置一至十行显示；
 - 调整文字上下位置；
 - 根据真实渲染宽度自动决定本页字数。
 
@@ -90,6 +90,8 @@ Intext Reader 主要解决两个问题：
 #### 固定宽度
 
 固定宽度始终使用用户设置的显示宽度，不根据当前行的剩余空间自动收缩。
+
+> **宽度提示说明：** 宽度是否足够取决于当前网页的实际字体、字号和待显示字符。插件只有在已经插入阅读内容后，才能根据当前页面进行检测。插入后打开插件弹窗并实时调整宽度，如果无法完整显示文字，宽度输入框下方会出现提示；尚未插入内容时不会显示该提示。
 
 ### 分隔符
 
@@ -132,6 +134,18 @@ Intext Reader 主要解决两个问题：
 所有快捷键都可以在插件设置中修改。自定义快捷键必须包含至少一个 `Alt`、`Ctrl` 或 `Shift` 修饰键，并且不能与其他插件快捷键重复。
 
 > **快捷键冲突提示：** 网页、浏览器或其他扩展可能占用相同的快捷键组合。如果快捷键没有响应，请先检查是否存在冲突，并在插件设置中改用不常用的组合。Windows 用户也可以配合 AutoHotkey 等按键映射工具，将顺手的按键映射到插件设置的快捷键组合。AutoHotkey 不属于本插件，需要单独安装和配置。
+
+### v1.2.0 更新
+
+v1.2.0 改进了窄宽度和多行显示：
+
+- 显示行数范围从 1–3 行扩展为 1–10 行；
+- 显示宽度最低值从 40 px 调整为 1 px；
+- 删除自动贴合中固定的 120 px 最小宽度；
+- 当前行只够显示少量文字时，直接使用实际剩余宽度；
+- 当前宽度无法完整显示文字时，不消耗字符或推进阅读位置；
+- 宽度过小时仅在插入后的插件弹窗中提示，不在网页中显示警告；
+- 状态中的实际宽度改为浏览器最终渲染宽度。
 
 ### v1.1.0 更新
 
@@ -237,7 +251,7 @@ Intext Reader focuses on two goals:
 - Use plain insertion with a fixed character count.
 - Use embedded reading with a constrained display width.
 - Choose fixed-width or automatic width fitting.
-- Display embedded content across one to three lines.
+- Display embedded content across one to ten lines.
 - Preview display width and vertical text position in real time.
 - Add the same custom separator before and after inserted text.
 - Navigate to the previous or next reading page.
@@ -291,7 +305,7 @@ Embedded reading supports:
 
 - A configurable maximum display width.
 - Fixed-width and automatic fitting modes.
-- One to three display lines.
+- One to ten display lines.
 - Vertical text-position adjustment.
 - Automatic character fitting based on actual rendered width.
 
@@ -304,6 +318,8 @@ Auto fit measures the remaining width of the current line and shrinks the readin
 #### Fixed Width
 
 Fixed width always uses the configured display width and does not shrink according to the remaining space on the current line.
+
+> **Width-warning note:** Whether the configured width is sufficient depends on the current webpage font, font size, and upcoming characters. The extension can evaluate this only after reading content has been inserted. Open the popup after insertion and adjust the width in real time; a warning appears below the width input when complete text cannot be displayed. No warning is shown before insertion.
 
 ### Separators
 
@@ -346,6 +362,18 @@ Manual mouse-wheel scrolling also removes the inserted content once it fully lea
 All shortcuts can be changed in the extension settings. A custom shortcut must include at least one modifier key: `Alt`, `Ctrl`, or `Shift`. Shortcuts must not conflict with one another.
 
 > **Shortcut conflict notice:** Webpages, browsers, or other extensions may use the same key combination. If a shortcut does not respond, check for conflicts and configure a less commonly used combination in the extension settings. Windows users may also use a key-mapping tool such as AutoHotkey to map a convenient key to the configured shortcut. AutoHotkey is not part of this extension and must be installed and configured separately.
+
+### v1.2.0 Changes
+
+Version 1.2.0 improves narrow-width and multiline behavior:
+
+- Expanded the display-line range from 1–3 to 1–10.
+- Reduced the minimum configurable display width from 40 px to 1 px.
+- Removed the fixed 120 px minimum from automatic fitting.
+- Used the actual remaining width when only a small amount of line space is available.
+- Prevented character consumption and reading-position movement when no complete text can fit.
+- Showed width-too-small warnings only in the popup after insertion, never on the webpage.
+- Changed the reported actual width to the browser's final rendered width.
 
 ### v1.1.0 Changes
 

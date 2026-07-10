@@ -67,6 +67,12 @@ assert.deepEqual(
   "vertical correction lower range is wide enough for manual adjustment"
 );
 
+assert.equal(
+  normalizeDisplaySettings({ slotWidth: "0" }).slotWidth,
+  1,
+  "zero width is clamped to the one-pixel minimum"
+);
+
 assert.deepEqual(
   getInsertedDisplayStyle({
     readMode: "embedded",
