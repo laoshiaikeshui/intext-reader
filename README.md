@@ -131,6 +131,8 @@ Intext Reader 主要解决两个问题：
 
 所有快捷键都可以在插件设置中修改。自定义快捷键必须包含至少一个 `Alt`、`Ctrl` 或 `Shift` 修饰键，并且不能与其他插件快捷键重复。
 
+> **快捷键冲突提示：** 网页、浏览器或其他扩展可能占用相同的快捷键组合。如果快捷键没有响应，请先检查是否存在冲突，并在插件设置中改用不常用的组合。Windows 用户也可以配合 AutoHotkey 等按键映射工具，将顺手的按键映射到插件设置的快捷键组合。AutoHotkey 不属于本插件，需要单独安装和配置。
+
 ### v1.1.0 更新
 
 v1.1.0 重点改进了界面和滚动兼容性：
@@ -342,6 +344,8 @@ Manual mouse-wheel scrolling also removes the inserted content once it fully lea
 | Quick hide | `Alt + H` |
 
 All shortcuts can be changed in the extension settings. A custom shortcut must include at least one modifier key: `Alt`, `Ctrl`, or `Shift`. Shortcuts must not conflict with one another.
+
+> **Shortcut conflict notice:** Webpages, browsers, or other extensions may use the same key combination. If a shortcut does not respond, check for conflicts and configure a less commonly used combination in the extension settings. Windows users may also use a key-mapping tool such as AutoHotkey to map a convenient key to the configured shortcut. AutoHotkey is not part of this extension and must be installed and configured separately.
 
 ### v1.1.0 Changes
 
