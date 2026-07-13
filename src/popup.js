@@ -8,12 +8,12 @@ const {
 const {
   DEFAULTS,
   DEFAULT_SHORTCUTS,
-  buildClearedSettings,
   buildProgressSummary,
-  buildReplacementSettings,
   getSaveErrorMessage,
+  mergeStoredSettings,
   normalizeSettings,
-  normalizeShortcutMap
+  normalizeShortcutMap,
+  updateCleanupQueue
 } = globalThis.IntextReaderPopupState;
 const {
   eventToShortcut,
@@ -26,6 +26,12 @@ const {
   getPageToggleText
 } = globalThis.IntextReaderPageControl;
 const { buildReadingStatusText, shouldShowWidthWarning } = globalThis.IntextReaderTextFitting;
+const { buildClearedBook, buildTxtBook, getBookSummary } = globalThis.IntextReaderBookState;
+const {
+  buildChapterJump,
+  buildChapterOptions,
+  getSelectedChapterIndex
+} = globalThis.IntextReaderChapterNavigation;
 
 const novelTextInput = document.getElementById("novelText");
 const pageSizeField = document.getElementById("pageSizeField");
@@ -44,12 +50,17 @@ const verticalOffsetValue = document.getElementById("verticalOffsetValue");
 const shortcutInputs = Array.from(document.querySelectorAll(".shortcut-input"));
 const resetShortcutsButton = document.getElementById("resetShortcutsButton");
 const chooseTxtButton = document.getElementById("chooseTxtButton");
+const chooseEpubButton = document.getElementById("chooseEpubButton");
 const selectedFileNameEl = document.getElementById("selectedFileName");
 const txtFileInput = document.getElementById("txtFile");
 const saveButton = document.getElementById("saveButton");
 const clearButton = document.getElementById("clearButton");
 const statusEl = document.getElementById("status");
 const progressSummaryEl = document.getElementById("progressSummary");
+const epubBookSection = document.getElementById("epubBookSection");
+const bookInfoEl = document.getElementById("bookInfo");
+const chapterSelect = document.getElementById("chapterSelect");
+const showEpubIllustrationsInput = document.getElementById("showEpubIllustrations");
 const fitSummaryEl = document.getElementById("fitSummary");
 const pageStatusEl = document.getElementById("pageStatus");
 const togglePageButton = document.getElementById("togglePageButton");
@@ -66,6 +77,7 @@ let shortcutMap = normalizeShortcutMap(DEFAULTS.keyboardShortcuts);
 let languagePreference = DEFAULT_LANGUAGE_PREFERENCE;
 let activeLanguage = resolveLanguage(languagePreference, navigator.language);
 let lastReadingStatus = { inserted: false };
+let activeBookState = { sourceType: "txt", chapters: [], imageAnchors: [] };
 
 function tr(key, params) {
   return translate(key, activeLanguage, params);
@@ -161,12 +173,46 @@ function applySettingsToForm(settings) {
 }
 
 function updateProgressSummary() {
-  progressSummaryEl.textContent = buildProgressSummary(getFormSettings(), activeLanguage);
+  const settings = { ...activeBookState, ...getFormSettings() };
+  const base = buildProgressSummary(settings, activeLanguage);
+  const summary = getBookSummary(settings);
+  progressSummaryEl.textContent = summary.sourceType === "epub"
+    ? tr("epubProgressSummary", {
+        title: summary.title || tr("epubUntitled"),
+        chapter: summary.chapterTitle || tr("chapterUnknown"),
+        progress: base
+      })
+    : base;
+  renderBookUi(settings);
+}
+
+function renderBookUi(settings) {
+  const isEpub = settings.sourceType === "epub" && Array.isArray(settings.chapters) && settings.chapters.length > 0;
+  epubBookSection.classList.toggle("is-hidden", !isEpub);
+  if (!isEpub) return;
+  bookInfoEl.textContent = tr("epubBookInfo", {
+    title: settings.bookTitle || tr("epubUntitled"),
+    author: settings.bookAuthor || tr("epubUnknownAuthor")
+  });
+  const selectedIndex = getSelectedChapterIndex(settings.chapters, settings.offset);
+  chapterSelect.replaceChildren(...buildChapterOptions(settings.chapters).map((item) => {
+    const option = document.createElement("option");
+    option.value = item.value;
+    option.textContent = item.label;
+    option.title = item.title;
+    option.selected = Number(item.value) === selectedIndex;
+    return option;
+  }));
+  chapterSelect.title = settings.chapters[selectedIndex]?.title || "";
+  showEpubIllustrationsInput.checked = Boolean(settings.showEpubIllustrations);
 }
 
 function updateFitSummary(readingStatus) {
   lastReadingStatus = readingStatus || { inserted: false };
-  fitSummaryEl.textContent = buildReadingStatusText(lastReadingStatus, activeLanguage);
+  const base = buildReadingStatusText(lastReadingStatus, activeLanguage);
+  fitSummaryEl.textContent = activeBookState.sourceType === "epub" && lastReadingStatus.inserted
+    ? `${base}${tr("epubRangeImages", { count: lastReadingStatus.imageCount || 0 })}`
+    : base;
   slotWidthWarning.classList.toggle("is-hidden", !shouldShowWidthWarning(lastReadingStatus));
 }
 
@@ -222,10 +268,11 @@ async function loadPageStatus() {
 }
 
 async function loadSettings() {
-  const storedValues = await chrome.storage.local.get({
-    ...DEFAULTS,
-    uiLanguage: DEFAULT_LANGUAGE_PREFERENCE
-  });
+  const storedValues = mergeStoredSettings(
+    await chrome.storage.local.get(null),
+    DEFAULT_LANGUAGE_PREFERENCE
+  );
+  activeBookState = storedValues;
   applyLanguagePreference(storedValues.uiLanguage);
   const settings = normalizeSettings(storedValues);
   applySettingsToForm(settings);
@@ -243,8 +290,30 @@ async function persistSettings(settings, successMessage = null) {
   }
 }
 
+async function cleanupStoredImageBook(bookId) {
+  if (!bookId) return;
+  let deleted = false;
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "intext-reader-image",
+      action: "image-delete-book",
+      bookId
+    });
+    deleted = response?.ok === true;
+  } catch (error) {
+    deleted = false;
+  }
+  const queue = updateCleanupQueue(activeBookState.pendingImageCleanupIds, bookId, deleted);
+  activeBookState = { ...activeBookState, pendingImageCleanupIds: queue };
+  try {
+    await chrome.storage.local.set({ pendingImageCleanupIds: queue });
+  } catch (error) {
+    showStatus(getSaveErrorMessage(error, activeLanguage), "error");
+  }
+}
+
 async function saveSettings() {
-  const settings = getFormSettings();
+  let settings = getFormSettings();
   const conflict = getShortcutConflict(settings.keyboardShortcuts);
   if (conflict) {
     showStatus(tr("shortcutConflict", {
@@ -255,18 +324,30 @@ async function saveSettings() {
     return;
   }
 
-  await persistSettings(settings);
+  const replacingEpub = activeBookState.sourceType === "epub" && settings.novelText !== activeBookState.novelText;
+  const oldBookId = replacingEpub ? activeBookState.bookId : "";
+  if (replacingEpub) {
+    settings = buildTxtBook(settings.novelText, { ...activeBookState, ...settings });
+  }
+  const saved = await persistSettings(settings);
+  if (saved && replacingEpub) {
+    activeBookState = settings;
+    await cleanupStoredImageBook(oldBookId);
+  }
 }
 
 async function clearText() {
-  const settings = getFormSettings();
+  const settings = { ...activeBookState, ...getFormSettings() };
   if (settings.novelText && !window.confirm(tr("clearConfirm"))) {
     return;
   }
 
-  const clearedSettings = buildClearedSettings(settings);
+  const oldBookId = settings.sourceType === "epub" ? settings.bookId : "";
+  const clearedSettings = buildClearedBook(settings);
   const saved = await persistSettings(clearedSettings, tr("textCleared"));
   if (saved) {
+    activeBookState = clearedSettings;
+    await cleanupStoredImageBook(oldBookId);
     const response = await sendPageMessage({ action: "restore" });
     updateFitSummary(response?.readingStatus);
   }
@@ -282,9 +363,12 @@ async function importTextFile(file) {
   }
 
   const text = await file.text();
-  const nextSettings = buildReplacementSettings(text, currentSettings);
+  const oldBookId = activeBookState.sourceType === "epub" ? activeBookState.bookId : "";
+  const nextSettings = buildTxtBook(text, { ...activeBookState, ...currentSettings });
   const saved = await persistSettings(nextSettings, tr("importedReset"));
   if (saved) {
+    activeBookState = nextSettings;
+    await cleanupStoredImageBook(oldBookId);
     const response = await sendPageMessage({ action: "restore" });
     updateFitSummary(response?.readingStatus);
     updateProgressSummary();
@@ -361,6 +445,28 @@ txtFileInput.addEventListener("change", async () => {
   }
 });
 chooseTxtButton.addEventListener("click", () => txtFileInput.click());
+chooseEpubButton.addEventListener("click", async () => {
+  const tabId = activeTabId || await getActiveTabId();
+  const query = tabId ? `?sourceTabId=${encodeURIComponent(tabId)}` : "";
+  await chrome.tabs.create({ url: chrome.runtime.getURL(`src/import.html${query}`) });
+});
+chapterSelect.addEventListener("change", async () => {
+  const jump = buildChapterJump(activeBookState.chapters, chapterSelect.value);
+  if (!jump) return;
+  offsetInput.value = String(jump.offset);
+  activeBookState = { ...activeBookState, offset: jump.offset };
+  await chrome.storage.local.set({ offset: jump.offset });
+  const response = await sendPageMessage({ action: "jump-chapter", offset: jump.offset });
+  updateFitSummary(response?.readingStatus);
+  updateProgressSummary();
+  showStatus(tr("chapterJumped", { chapter: activeBookState.chapters[jump.chapterIndex].title }));
+});
+showEpubIllustrationsInput.addEventListener("change", async () => {
+  const enabled = showEpubIllustrationsInput.checked;
+  activeBookState = { ...activeBookState, showEpubIllustrations: enabled };
+  await chrome.storage.local.set({ showEpubIllustrations: enabled });
+  showStatus(tr(enabled ? "epubIllustrationsEnabled" : "epubIllustrationsDisabled"));
+});
 
 saveButton.addEventListener("click", saveSettings);
 clearButton.addEventListener("click", clearText);

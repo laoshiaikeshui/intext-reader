@@ -155,13 +155,17 @@
       }
 
       const remaining = source.slice(offset);
-      const length = findFittingLengthByGrowth(remaining, (candidate) => fitsText(candidate, width, index));
+      const sourceOffset = offset;
+      const length = findFittingLengthByGrowth(
+        remaining,
+        (candidate) => fitsText(candidate, width, index, sourceOffset)
+      );
       if (length <= 0) {
         break;
       }
 
       const lineText = remaining.slice(0, length);
-      lines.push({ text: lineText, width });
+      lines.push({ text: lineText, width, sourceOffset });
       offset += length;
     }
 

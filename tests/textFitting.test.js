@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const { decorateIllustrationRange } = require("../src/illustrationMarkers.js");
 const {
   buildReadingStatusText,
   findFittingLength,
@@ -184,9 +185,9 @@ assert.deepEqual(
   lines,
   {
     lines: [
-      { text: "abc", width: 3 },
-      { text: "defg", width: 4 },
-      { text: "hi", width: 2 }
+      { text: "abc", width: 3, sourceOffset: 0 },
+      { text: "defg", width: 4, sourceOffset: 3 },
+      { text: "hi", width: 2, sourceOffset: 7 }
     ],
     displayedChars: 9
   },
@@ -262,13 +263,30 @@ assert.deepEqual(
   indexedLines,
   {
     lines: [
-      { text: "a", width: 3 },
-      { text: "bc", width: 3 },
-      { text: "def", width: 3 }
+      { text: "a", width: 3, sourceOffset: 0 },
+      { text: "bc", width: 3, sourceOffset: 1 },
+      { text: "def", width: 3, sourceOffset: 3 }
     ],
     displayedChars: 6
   },
   "embedded multiline fitting exposes the real line index even when widths match"
+);
+
+const markerAwareFit = fitTextAcrossLines("abcde", [6], (candidate, width, index, sourceOffset) => {
+  const decorated = decorateIllustrationRange({
+    text: candidate,
+    rangeStart: sourceOffset,
+    novelLength: 5,
+    anchors: [{ id: "image", textOffset: 2 }],
+    language: "zh",
+    enabled: true
+  });
+  return decorated.text.length <= width;
+});
+assert.deepEqual(
+  markerAwareFit,
+  { lines: [{ text: "ab", width: 6, sourceOffset: 0 }], displayedChars: 2 },
+  "marker width reduces fitted source characters without counting as source text"
 );
 
 

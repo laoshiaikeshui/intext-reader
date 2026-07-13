@@ -19,7 +19,9 @@ Intext Reader 主要解决两个问题：
 
 ### 主要功能
 
-- 支持直接粘贴文本或导入 `.txt` 文件；
+- 支持直接粘贴文本以及导入 `.txt`、EPUB 2 和 EPUB 3 文件；
+- 支持 EPUB 章节选择、章节跳转和当前位置记忆；
+- 支持按当前实际显示范围提示 EPUB 插图，并通过可移动悬浮球查看；
 - 在网页选中文字后插入阅读内容，不替换原文字；
 - 支持固定字数的普通插入；
 - 支持限制显示宽度的嵌入阅读；
@@ -50,14 +52,16 @@ Intext Reader 主要解决两个问题：
 ### 快速开始
 
 1. 打开插件弹窗。
-2. 粘贴文本，或者选择一个 `.txt` 文件导入。
-3. 导入 TXT 后，插件会自动保存新文本并将阅读位置归零。
+2. 粘贴文本、选择 `.txt` 文件，或者打开 EPUB 导入页。
+3. 导入 TXT 或 EPUB 后，插件会自动保存新文本并将阅读位置归零。
 4. 选择普通插入或嵌入阅读。
 5. 修改显示方式、宽度、分隔符或快捷键后，点击“保存设置”。
 6. 在普通网页中用鼠标选中一段文字。
 7. 按下插入快捷键，阅读内容会出现在选中文字后方。
 8. 使用上一页和下一页快捷键继续阅读。
 9. 使用滚轮或一键隐藏快捷键让文本离开视窗，插件会自动移除插入内容。
+
+EPUB 导入完成后，可以在弹窗中选择章节。选择后会立即跳转；如果页面已有嵌入文字，会直接刷新为所选章节开头。开启“显示 EPUB 插图悬浮球”后，网页边缘会显示一个可拖动的数字悬浮球。数字表示当前插入文字范围内包含的插图总数；没有插图时显示 `0`，此时只能移动悬浮球，不会打开图片窗口。
 
 文本被移除后，即使重新滚动到原位置也不会再次出现，需要重新选择文字并执行插入。
 
@@ -106,6 +110,22 @@ Intext Reader 主要解决两个问题：
 
 在普通插入模式下，分隔符不占用设置的阅读字数。
 
+### EPUB 与插图
+
+EPUB 由本地导入页解析，不会上传。导入成功后会替换当前书籍、自动保存正文、将阅读位置归零，并在弹窗中显示书名和章节选择器。
+
+插图功能的使用方式：
+
+1. 在弹窗中开启“显示 EPUB 插图悬浮球”；
+2. 插入 EPUB 正文；
+3. 正文中的 `[图片N]` 表示该位置关联 `N` 张图片；
+4. 页面边缘的数字悬浮球显示当前插入范围内的图片总数；
+5. 数字大于 `0` 时点击悬浮球，可查看并切换这一范围内的图片；
+6. 图片窗口可拖动调整大小，图片始终完整显示并保持原始比例；
+7. 悬浮球可自由拖动，松手后会吸附到最近的页面边缘。
+
+封面、卷首插图和正文插图都会按其阅读位置保留。小型装饰图片也可能被识别为插图，可直接忽略对应标记或关闭悬浮球。
+
 ### 一键隐藏
 
 直接让文本瞬间消失可能比较突兀，因此 Intext Reader 会优先尝试通过页面滚动完成隐藏。
@@ -134,6 +154,23 @@ Intext Reader 主要解决两个问题：
 所有快捷键都可以在插件设置中修改。自定义快捷键必须包含至少一个 `Alt`、`Ctrl` 或 `Shift` 修饰键，并且不能与其他插件快捷键重复。
 
 > **快捷键冲突提示：** 网页、浏览器或其他扩展可能占用相同的快捷键组合。如果快捷键没有响应，请先检查是否存在冲突，并在插件设置中改用不常用的组合。Windows 用户也可以配合 AutoHotkey 等按键映射工具，将顺手的按键映射到插件设置的快捷键组合。AutoHotkey 不属于本插件，需要单独安装和配置。
+
+### v1.3.0 更新
+
+v1.3.0 新增本地 EPUB 阅读和插图查看：
+
+- 支持导入 EPUB 2 和 EPUB 3，并自动提取正文、章节和插图；
+- 支持章节选择、立即跳转和阅读位置记忆；
+- 在正文插图位置显示 `[图片N]` 标记；
+- 新增可关闭、可拖动并自动贴边的数字插图悬浮球；
+- 新增可调整大小的多图查看窗口，完整显示图片并保持原始比例；
+- 保留封面、卷首图片和纯图片页面；
+- 在解压前检查 EPUB 文件数量和展开体积，并去重重复引用的图片资源；
+- 改进加密内容、固定版式和异常文件识别；
+- 对损坏、超限、带 DRM 和仅固定版式的 EPUB 给出明确错误；
+- EPUB 正文、进度和图片仍只保存在浏览器本地。
+
+完整说明见 [v1.3.0 Release Notes](RELEASE_NOTES_v1.3.0.md)。
 
 ### v1.2.0 更新
 
@@ -166,6 +203,7 @@ v1.1.0 重点改进了界面和滚动兼容性：
 Intext Reader 本地运行：
 
 - 导入文本保存在 `chrome.storage.local`；
+- EPUB 插图保存在扩展自己的 IndexedDB 中；
 - 不会将阅读文本上传到任何服务器；
 - 不包含统计分析或广告；
 - 不加载远程脚本；
@@ -174,6 +212,7 @@ Intext Reader 本地运行：
 扩展仅申请以下权限：
 
 - `storage`：保存文本、阅读位置和插件设置；
+- `unlimitedStorage`：减少较大本地 EPUB 因浏览器存储配额导致的导入失败；
 - `activeTab`：与当前活动网页通信并执行用户触发的操作。
 
 ### 兼容性与已知限制
@@ -183,7 +222,8 @@ Intext Reader 本地运行：
 - 自动贴合效果会受到网页字体、缩放比例和排版结构影响；
 - 普通插入无法保证翻页前后的页面排版完全稳定；
 - 特殊 iframe、编辑器和复杂内部滚动区域可能存在兼容性差异；
-- 当前支持粘贴文本和 TXT 文件，暂不支持 EPUB 解析；
+- 不支持带 DRM、仅固定版式、有声或视频内容的 EPUB；SVG 插图暂不显示；
+- 单个 EPUB 文件的本地导入上限为 256 MB；
 - 当前不包含书架、云同步和按网站保存独立配置。
 
 正式使用前，建议在目标网页完整测试一次插入、翻页、手动滚动和一键隐藏流程。
@@ -225,7 +265,7 @@ Get-ChildItem src -Filter *.js | ForEach-Object { node --check $_.FullName }
 
 ### 开源许可
 
-本项目采用 [MIT License](LICENSE)。
+本项目采用 [MIT License](LICENSE)。第三方组件及其许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
 
@@ -246,7 +286,9 @@ Intext Reader focuses on two goals:
 
 ### Features
 
-- Paste text directly or import a `.txt` file.
+- Paste text directly or import `.txt`, EPUB 2, and EPUB 3 files.
+- Select EPUB chapters, jump immediately, and retain the current position.
+- Detect EPUB illustrations in the actual displayed text range and open them from a movable floating button.
 - Insert reading content after selected webpage text without replacing it.
 - Use plain insertion with a fixed character count.
 - Use embedded reading with a constrained display width.
@@ -278,14 +320,16 @@ After installing or updating the extension, refresh any webpage that was already
 ### Quick Start
 
 1. Open the extension popup.
-2. Paste text or import a `.txt` file.
-3. Importing a TXT file automatically saves the new text and resets the reading position.
+2. Paste text, import a `.txt` file, or open the EPUB importer.
+3. Importing TXT or EPUB automatically saves the new text and resets the reading position.
 4. Choose plain insertion or embedded reading.
 5. After changing display mode, width, separator, or shortcuts, click **Save settings**.
 6. Select text on a normal webpage.
 7. Press the insert shortcut to place reading content after the selection.
 8. Use the previous and next shortcuts to continue reading.
 9. Use the mouse wheel or quick-hide shortcut to move the content out of view. The extension will then remove it automatically.
+
+After importing EPUB, use the chapter selector in the popup to jump immediately. If text is already inserted, it refreshes from the selected chapter. Enable **Show EPUB illustration button** to display a draggable numeric button at the page edge. The number is the total illustrations in the currently inserted text range. When it shows `0`, the button can be moved but does not open the viewer.
 
 After inserted content is removed, scrolling back to its original position will not make it reappear. Select text and insert again when needed.
 
@@ -334,6 +378,22 @@ The separator can be:
 
 In plain insertion mode, separators do not count toward the configured page size.
 
+### EPUB and Illustrations
+
+EPUB files are parsed by the local import page and are never uploaded. A successful import replaces the current book, saves its text, resets reading progress, and adds the title and chapter selector to the popup.
+
+To use illustrations:
+
+1. Enable **Show EPUB illustration button** in the popup.
+2. Insert EPUB text into a webpage.
+3. An `[N images]` marker indicates that `N` images are associated with that text position.
+4. The numeric edge button shows the total images in the currently inserted range.
+5. When the number is greater than `0`, click it to open and navigate those images.
+6. Resize the viewer as needed; each image remains fully visible and keeps its original aspect ratio.
+7. Drag the numeric button anywhere; it snaps to the nearest page edge when released.
+
+Covers, front matter, and body illustrations are retained at their reading positions. Small decorative images may also be detected; ignore their markers or disable the illustration button if they are not useful.
+
 ### Quick Hide
 
 Instantly deleting text can look abrupt, so Intext Reader first attempts to hide it through normal-looking page movement.
@@ -362,6 +422,23 @@ Manual mouse-wheel scrolling also removes the inserted content once it fully lea
 All shortcuts can be changed in the extension settings. A custom shortcut must include at least one modifier key: `Alt`, `Ctrl`, or `Shift`. Shortcuts must not conflict with one another.
 
 > **Shortcut conflict notice:** Webpages, browsers, or other extensions may use the same key combination. If a shortcut does not respond, check for conflicts and configure a less commonly used combination in the extension settings. Windows users may also use a key-mapping tool such as AutoHotkey to map a convenient key to the configured shortcut. AutoHotkey is not part of this extension and must be installed and configured separately.
+
+### v1.3.0 Changes
+
+Version 1.3.0 adds local EPUB reading and illustration viewing:
+
+- Import EPUB 2 and EPUB 3 files and extract text, chapters, and illustrations locally.
+- Select chapters, jump immediately, and retain reading progress.
+- Show `[N images]` markers at illustration positions in the text.
+- Use an optional draggable numeric illustration button that snaps to page edges.
+- View multiple images in a resizable window while preserving full-image proportions.
+- Retain covers, front matter images, and image-only pages.
+- Check entry counts and expanded size before extraction, and deduplicate repeatedly referenced image resources.
+- Improve encrypted-content, fixed-layout, and malformed-file detection.
+- Report clear errors for damaged, oversized, DRM-protected, and fixed-layout-only EPUB files.
+- Keep EPUB text, progress, and images entirely in local browser storage.
+
+See [v1.3.0 Release Notes](RELEASE_NOTES_v1.3.0.md) for the concise update and usage guide.
 
 ### v1.2.0 Changes
 
@@ -394,6 +471,7 @@ Version 1.1.0 focuses on interface quality and scrolling compatibility:
 Intext Reader runs locally:
 
 - Imported text is stored in `chrome.storage.local`.
+- EPUB illustration binaries are stored in the extension's IndexedDB.
 - Reading text is never uploaded to a server.
 - The extension contains no analytics or advertising.
 - The extension does not load remote scripts.
@@ -402,6 +480,7 @@ Intext Reader runs locally:
 The extension requests only these permissions:
 
 - `storage`: Saves reading text, reading position, and extension settings.
+- `unlimitedStorage`: Reduces local quota failures for larger EPUB files.
 - `activeTab`: Communicates with the active webpage for user-triggered actions.
 
 ### Compatibility and Known Limitations
@@ -411,7 +490,8 @@ The extension requests only these permissions:
 - Auto-fit results depend on webpage fonts, zoom level, and layout structure.
 - Plain insertion cannot guarantee a stable layout between page changes.
 - Special iframes, editors, and complex internal scrolling areas may behave differently.
-- The current version supports pasted text and TXT files, but not EPUB parsing.
+- DRM-protected, fixed-layout-only, audio, and video EPUB content is unsupported; SVG illustrations are skipped.
+- Local import is limited to 256 MB per EPUB file.
 - Bookshelf management, cloud synchronization, and per-site profiles are not included.
 
 Before regular use, test the complete insert, page navigation, manual scroll, and quick-hide flow on the target website.
@@ -453,4 +533,4 @@ Webpage structure, browser versions, and other extensions may affect behavior. T
 
 ### License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). Third-party components and licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

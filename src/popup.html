@@ -38,6 +38,24 @@
         </div>
       </div>
 
+      <div class="file-row">
+        <span data-i18n="importEpub">导入 EPUB</span>
+        <button id="chooseEpubButton" class="secondary file-picker-button" type="button" data-i18n="chooseEpub">打开 EPUB 导入页</button>
+      </div>
+
+      <section id="epubBookSection" class="epub-book is-hidden">
+        <p id="bookInfo" class="book-info"></p>
+        <label class="field">
+          <span data-i18n="currentChapter">当前章节</span>
+          <select id="chapterSelect"></select>
+        </label>
+        <label class="toggle-row">
+          <span class="toggle-label" data-i18n="showEpubIllustrations">显示 EPUB 插图悬浮球</span>
+          <input id="showEpubIllustrations" class="toggle-input" type="checkbox">
+          <span class="toggle-control" aria-hidden="true"></span>
+        </label>
+      </section>
+
       <div class="grid">
         <label id="pageSizeField" class="field">
           <span data-i18n="charsPerPage">每页字数</span>
@@ -116,6 +134,9 @@
       </footer>
     </main>
 
+    <script src="epubModel.js"></script>
+    <script src="bookState.js"></script>
+    <script src="chapterNavigation.js"></script>
     <script src="i18n.js"></script>
     <script src="shortcuts.js"></script>
     <script src="popupState.js"></script>

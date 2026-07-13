@@ -1,17 +1,43 @@
 const assert = require("node:assert/strict");
 const {
+  DEFAULTS,
   DEFAULT_SHORTCUTS,
   buildProgressSummary,
   buildReplacementSettings,
   buildClearedSettings,
   getSaveErrorMessage,
-  normalizeSettings
+  mergeStoredSettings,
+  normalizeSettings,
+  updateCleanupQueue
 } = require("../src/popupState.js");
+
+assert.deepEqual(updateCleanupQueue(["old"], "new", false), ["old", "new"]);
+assert.deepEqual(updateCleanupQueue(["old", "new", "old"], "old", true), ["new"]);
 
 const baseDefaults = {
   embedLineCount: 1,
   keyboardShortcuts: DEFAULT_SHORTCUTS
 };
+
+assert.deepEqual(
+  mergeStoredSettings({
+    novelText: "chapter text",
+    sourceType: "epub",
+    chapters: [{ title: "Chapter 1", start: 0, end: 12 }],
+    imageAnchors: [{ offset: 4, imageId: "image-1" }],
+    showEpubIllustrations: true
+  }),
+  {
+    ...DEFAULTS,
+    uiLanguage: "auto",
+    novelText: "chapter text",
+    sourceType: "epub",
+    chapters: [{ title: "Chapter 1", start: 0, end: 12 }],
+    imageAnchors: [{ offset: 4, imageId: "image-1" }],
+    showEpubIllustrations: true
+  },
+  "EPUB metadata must survive popup storage loading"
+);
 
 assert.deepEqual(
   normalizeSettings({

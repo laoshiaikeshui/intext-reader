@@ -1,4 +1,4 @@
-importScripts("backgroundCommands.js");
+importScripts("backgroundCommands.js", "imageStore.js");
 
 const COMMAND_TO_ACTION = {
   "intext-insert": "insert",
@@ -9,6 +9,12 @@ const COMMAND_TO_ACTION = {
 };
 
 const { sendActionToActiveTab } = globalThis.IntextReaderBackground;
+const {
+  createImageRepository,
+  createIndexedDbAdapter,
+  handleImageMessage
+} = globalThis.IntextReaderImageStore;
+const imageRepository = createImageRepository(createIndexedDbAdapter());
 
 chrome.commands.onCommand.addListener(async (command) => {
   const action = COMMAND_TO_ACTION[command];
@@ -17,6 +23,16 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 
   await sendActionToActiveTab(chrome, action);
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "intext-reader-image") {
+    return;
+  }
+  handleImageMessage(message, imageRepository)
+    .then(sendResponse)
+    .catch((error) => sendResponse({ ok: false, reason: "image-storage-error", message: error?.message || String(error) }));
+  return true;
 });
 
 

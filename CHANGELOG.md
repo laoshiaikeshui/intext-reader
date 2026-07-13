@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+## v1.3.0 - 2026-07-13
+
+- Added local EPUB 2 and EPUB 3 import with transactional replacement and archive safety checks.
+- Added chapter detection, popup chapter selection, and immediate chapter jumps.
+- Added `[图片N]` / `[N images]` markers at EPUB illustration positions, including covers and front matter images.
+- Added an optional numeric illustration button that reflects the current rendered text range.
+- Added a movable edge-snapping illustration button and a resizable multi-image viewer that preserves image proportions.
+- Added archive metadata preflight before extraction and retained post-extraction size checks.
+- Deduplicated repeated image resources while preserving every reading-position anchor.
+- Improved encrypted-content and spine-level fixed-layout detection.
+- Queued failed local image cleanup for retry on the next EPUB import.
+- Kept EPUB text, metadata, progress, and illustrations entirely in local browser storage.
+- Added explicit errors for damaged, oversized, fixed-layout-only, and DRM-protected EPUB files.
+
 ## v1.2.0 - 2026-07-10
 
 - Expanded embedded display lines from 1–3 to 1–10.

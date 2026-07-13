@@ -145,6 +145,98 @@ button.file-picker-button {
   display: none;
 }
 
+.epub-book {
+  padding: 10px 0;
+  border-top: 1px solid #dfe3e7;
+  border-bottom: 1px solid #dfe3e7;
+}
+
+.book-info {
+  margin: 0 0 8px;
+  color: #3c4043;
+  overflow-wrap: anywhere;
+}
+
+select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #c7ccd1;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+}
+
+.toggle-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.toggle-label {
+  color: #303744;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-control {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border: 1px solid #98a2b3;
+  border-radius: 10px;
+  background: #b8c0ca;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.toggle-control::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(31, 41, 55, 0.35);
+  transition: transform 0.15s;
+}
+
+.toggle-row:hover .toggle-control {
+  border-color: #667085;
+}
+
+.toggle-input:checked + .toggle-control {
+  border-color: #1f6feb;
+  background: #1f6feb;
+}
+
+.toggle-input:checked + .toggle-control::after {
+  transform: translateX(16px);
+}
+
+.toggle-input:focus-visible + .toggle-control {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
 .field span,
 .file-row span {
   color: #303744;

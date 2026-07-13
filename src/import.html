@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Import EPUB - Intext Reader</title>
+    <link rel="stylesheet" href="import.css">
+  </head>
+  <body>
+    <main class="import-shell">
+      <header>
+        <img src="../icons/icon-48.png" width="40" height="40" alt="">
+        <div>
+          <h1 data-i18n="epubImportTitle">导入 EPUB</h1>
+          <p data-i18n="epubImportDescription">在本地解析书籍，并继续使用现有嵌入阅读方式。</p>
+        </div>
+      </header>
+
+      <section class="import-section">
+        <button id="chooseEpubFileButton" class="file-command" type="button" data-i18n="chooseEpubFile">选择 EPUB 文件</button>
+        <input id="epubFile" type="file" accept=".epub,application/epub+zip">
+        <p id="fileName" class="muted" data-i18n="noFileSelected">未选择文件</p>
+      </section>
+
+      <section id="progressSection" class="import-section is-hidden" aria-live="polite">
+        <div class="progress-row"><span id="progressText"></span><progress id="progress" max="3" value="0"></progress></div>
+      </section>
+
+      <section id="previewSection" class="import-section is-hidden">
+        <div class="book-heading"><img id="coverPreview" class="cover-preview is-hidden" alt=""><h2 id="bookTitle"></h2></div>
+        <dl>
+          <div><dt data-i18n="epubAuthor">作者</dt><dd id="bookAuthor"></dd></div>
+          <div><dt data-i18n="epubChapterCount">章节</dt><dd id="chapterCount"></dd></div>
+          <div><dt data-i18n="epubCharacterCount">字符</dt><dd id="characterCount"></dd></div>
+          <div><dt data-i18n="epubIllustrationCount">插图</dt><dd id="illustrationCount"></dd></div>
+        </dl>
+        <p id="warningText" class="warning is-hidden"></p>
+        <button id="importButton" type="button" data-i18n="importAndReplace">导入并替换当前文本</button>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+      <p class="privacy-note" data-i18n="epubLocalOnly">文件仅在本机浏览器内解析和保存，不会上传。</p>
+    </main>
+
+    <script src="../vendor/fflate-0.8.3.min.js"></script>
+    <script src="epubModel.js"></script>
+    <script src="epubArchive.js"></script>
+    <script src="epubParser.js"></script>
+    <script src="bookState.js"></script>
+    <script src="imageStore.js"></script>
+    <script src="i18n.js"></script>
+    <script src="importController.js"></script>
+    <script src="import.js"></script>
+  </body>
+</html>

@@ -11,7 +11,12 @@ const STORAGE_DEFAULTS = {
   verticalOffset: -0.43,
   autoFitSlotEnabled: true,
   keyboardShortcuts: globalThis.IntextReaderShortcuts.DEFAULT_SHORTCUTS,
-  uiLanguage: "auto"
+  uiLanguage: "auto",
+  sourceType: "txt",
+  bookId: "",
+  chapters: [],
+  imageAnchors: [],
+  showEpubIllustrations: false
 };
 
 const INSERTED_ATTR = "data-intext-reader-insert";
@@ -46,6 +51,12 @@ const {
   shouldShowToastForAction
 } = globalThis.IntextReaderInteractionPolicy;
 const { resolveLanguage, translate } = globalThis.IntextReaderI18n;
+const { buildReadingRangeStatus } = globalThis.IntextReaderReadingRange;
+const {
+  decorateIllustrationRange,
+  shouldRerenderIllustrationDisplay
+} = globalThis.IntextReaderIllustrationMarkers;
+const { createIllustrationOverlay } = globalThis.IntextReaderIllustrationOverlay;
 
 let insertedNode = null;
 let pageEnabled = true;
@@ -57,6 +68,13 @@ let offsetHistory = [];
 let lastReadingStatus = { inserted: false };
 let activeShortcuts = normalizeShortcutMap(DEFAULT_SHORTCUTS);
 let activeLanguage = resolveLanguage("auto", navigator.language);
+let cachedSettings = { ...STORAGE_DEFAULTS };
+const illustrationOverlay = createIllustrationOverlay({
+  document,
+  storage: chrome.storage.local,
+  runtime: chrome.runtime,
+  translate: tr
+});
 
 function tr(key, params) {
   return translate(key, activeLanguage, params);
@@ -139,6 +157,24 @@ function setNoReadingStatus() {
   lastReadingStatus = { inserted: false };
 }
 
+function refreshIllustrations(settings = cachedSettings) {
+  cachedSettings = { ...cachedSettings, ...settings };
+  const enabled = cachedSettings.sourceType === "epub" && Boolean(cachedSettings.showEpubIllustrations);
+  const range = buildReadingRangeStatus(cachedSettings, lastReadingStatus);
+  if (lastReadingStatus.inserted) {
+    lastReadingStatus = {
+      ...lastReadingStatus,
+      sourceType: range.sourceType,
+      startOffset: range.startOffset,
+      endOffset: range.endOffset,
+      chapterIndex: range.chapterIndex,
+      imageCount: range.images.length
+    };
+  }
+  illustrationOverlay.setVisible(enabled);
+  illustrationOverlay.updateRange(range.images, range.bookId);
+}
+
 function restoreInsertedNode() {
   detachScrollRestoreContainer();
   if (insertedNode?.isConnected) {
@@ -148,6 +184,7 @@ function restoreInsertedNode() {
   insertedNode = null;
   offsetHistory = [];
   setNoReadingStatus();
+  refreshIllustrations();
 }
 
 function applyBaseInlineStyle(node) {
@@ -300,8 +337,25 @@ function lineFitsText(line, text, prefix, suffix) {
   return line.scrollWidth <= Math.ceil(visibleWidth);
 }
 
+function decorateExcerptRange(settings, text, rangeStart, novelLength) {
+  return decorateIllustrationRange({
+    text,
+    rangeStart,
+    novelLength,
+    anchors: settings.imageAnchors,
+    language: activeLanguage,
+    enabled: settings.sourceType === "epub" && Boolean(settings.showEpubIllustrations)
+  });
+}
+
 function renderPlainExcerpt(settings, excerpt) {
-  insertedNode.textContent = formatInsertedText(settings.separator, excerpt.text);
+  const decorated = decorateExcerptRange(
+    settings,
+    excerpt.text,
+    excerpt.offset,
+    excerpt.novelText.length
+  );
+  insertedNode.textContent = formatInsertedText(settings.separator, decorated.text);
   lastReadingStatus = buildReadingStatus({
     inserted: true,
     readMode: "plain",
@@ -323,7 +377,13 @@ function renderEmbeddedExcerpt(settings, excerpt) {
 
   const separator = renderSeparator(settings.separator);
   if (isAutoEmbedMode(settings) && excerpt.text) {
-    const firstCharacterFits = lineFitsText(lineNodes[0], excerpt.text.slice(0, 1), separator, "");
+    const firstCharacter = decorateExcerptRange(
+      settings,
+      excerpt.text.slice(0, 1),
+      excerpt.offset,
+      excerpt.novelText.length
+    ).text;
+    const firstCharacterFits = lineFitsText(lineNodes[0], firstCharacter, separator, "");
     const resolvedWidth = resolveAutoFirstLineWidth({
       effectiveSlotWidth: widths[0],
       maxSlotWidth: firstSlot.maxSlotWidth,
@@ -335,10 +395,16 @@ function renderEmbeddedExcerpt(settings, excerpt) {
     }
   }
 
-  const fit = fitTextAcrossLines(excerpt.text, widths, (candidate, width, index) => {
+  const fit = fitTextAcrossLines(excerpt.text, widths, (candidate, width, index, sourceOffset) => {
     const line = lineNodes[index];
     const prefix = index === 0 ? separator : "";
-    return lineFitsText(line, candidate, prefix, "");
+    const decorated = decorateExcerptRange(
+      settings,
+      candidate,
+      excerpt.offset + sourceOffset,
+      excerpt.novelText.length
+    );
+    return lineFitsText(line, decorated.text, prefix, "");
   });
 
   insertedNode.textContent = "";
@@ -351,7 +417,13 @@ function renderEmbeddedExcerpt(settings, excerpt) {
     const line = createLineNode(settings, lineData.width);
     const prefix = index === 0 ? separator : "";
     const suffix = index === fit.lines.length - 1 ? separator : "";
-    line.textContent = `${prefix}${lineData.text}${suffix}`;
+    const decorated = decorateExcerptRange(
+      settings,
+      lineData.text,
+      excerpt.offset + lineData.sourceOffset,
+      excerpt.novelText.length
+    );
+    line.textContent = `${prefix}${decorated.text}${suffix}`;
     insertedNode.appendChild(line);
     firstRenderedLine ||= line;
   });
@@ -374,10 +446,12 @@ function renderEmbeddedExcerpt(settings, excerpt) {
 }
 
 function applyExcerptToInsertedNode(settings) {
+  cachedSettings = { ...cachedSettings, ...settings };
   if (!insertedNode?.isConnected) {
     detachScrollRestoreContainer();
     insertedNode = null;
     setNoReadingStatus();
+    refreshIllustrations(settings);
     return false;
   }
 
@@ -387,6 +461,8 @@ function applyExcerptToInsertedNode(settings) {
   } else {
     renderPlainExcerpt(settings, excerpt);
   }
+
+  refreshIllustrations(settings);
 
   return true;
 }
@@ -506,6 +582,15 @@ async function movePage(direction) {
   } else if (shouldShowToastForAction(action)) {
     showToast(tr("positionSaved", { offset: nextOffset }));
   }
+}
+
+async function jumpToChapter(offset) {
+  const settings = await storageGet();
+  const nextOffset = clampOffset(Number(offset), String(settings.novelText || "").length);
+  offsetHistory = [];
+  await storageSet({ offset: nextOffset });
+  applyExcerptToInsertedNode({ ...settings, offset: nextOffset });
+  return nextOffset;
 }
 
 function isScrollableElement(element) {
@@ -792,6 +877,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === "jump-chapter") {
+    if (!pageEnabled) {
+      sendResponse({ ok: false, pageEnabled, reason: "page-paused", readingStatus: lastReadingStatus });
+      return;
+    }
+    jumpToChapter(message.offset).then(() => {
+      sendResponse({ ok: true, pageEnabled, readingStatus: lastReadingStatus });
+    });
+    return true;
+  }
+
   if (!canRunPageAction(pageEnabled, message.action)) {
     sendResponse({ ok: false, pageEnabled, reason: "page-paused", readingStatus: lastReadingStatus });
     return;
@@ -836,8 +932,10 @@ function runAction(action) {
 }
 
 function updateCachedSettings(settings) {
+  cachedSettings = { ...cachedSettings, ...settings };
   activeShortcuts = normalizeShortcutMap(settings.keyboardShortcuts);
   activeLanguage = resolveLanguage(settings.uiLanguage, navigator.language);
+  refreshIllustrations(cachedSettings);
 }
 
 storageGet().then(updateCachedSettings);
@@ -848,6 +946,16 @@ if (chrome.storage?.onChanged) {
     }
     if (areaName === "local" && changes.uiLanguage) {
       activeLanguage = resolveLanguage(changes.uiLanguage.newValue, navigator.language);
+    }
+    if (areaName === "local") {
+      for (const [key, change] of Object.entries(changes)) {
+        cachedSettings[key] = change.newValue;
+      }
+      if (shouldRerenderIllustrationDisplay(changes) && insertedNode?.isConnected) {
+        applyExcerptToInsertedNode(cachedSettings);
+      } else {
+        refreshIllustrations(cachedSettings);
+      }
     }
   });
 }

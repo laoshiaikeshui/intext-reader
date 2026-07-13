@@ -124,6 +124,23 @@
     };
   }
 
+  function mergeStoredSettings(storedValues = {}, languageDefault = "auto") {
+    return {
+      ...DEFAULTS,
+      uiLanguage: languageDefault,
+      ...storedValues
+    };
+  }
+
+  function updateCleanupQueue(values, bookId, deleted) {
+    const id = String(bookId || "");
+    const queue = Array.from(new Set((Array.isArray(values) ? values : [])
+      .map((value) => String(value || ""))
+      .filter(Boolean)));
+    if (!id) return queue;
+    return deleted ? queue.filter((value) => value !== id) : Array.from(new Set([...queue, id]));
+  }
+
   function buildProgressSummary(values, language = "zh") {
     const settings = normalizeSettings(values);
     const total = settings.novelText.length;
@@ -172,10 +189,12 @@
     buildProgressSummary,
     buildReplacementSettings,
     getSaveErrorMessage,
+    mergeStoredSettings,
     normalizeSettings,
     normalizeShortcutMap,
     parseNonNegativeInteger,
-    parsePositiveInteger
+    parsePositiveInteger,
+    updateCleanupQueue
   };
 
   if (typeof module !== "undefined" && module.exports) {
